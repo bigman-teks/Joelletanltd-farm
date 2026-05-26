@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Joelle-Tan Ltd</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#0a1628;--navy2:#112240;--gold:#c9952a;--gold2:#e8b84b;--gold3:#f5d080;--text:#e8eaf0;--text2:#a8b4c8;--text3:#6a7d95;--card:#112240;--border:rgba(201,149,42,0.2);--success:#2ecc71;--danger:#e74c3c;--warning:#f39c12;--info:#3a7bd5}
+body{background:var(--navy);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:var(--navy2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
+.logo{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo img{width:40px;height:40px;object-fit:contain;border-radius:6px;flex-shrink:0}
+.logo-text{font-size:13px;font-weight:700;color:var(--gold2);line-height:1.2}
+.logo-sub{font-size:10px;color:var(--text3)}
+nav{padding:12px 0;flex:1}
+.nav-sec{padding:0 16px;margin:10px 0 3px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(201,149,42,.08);color:var(--gold3)}
+.nav-item.active{background:rgba(201,149,42,.12);color:var(--gold2);border-left-color:var(--gold)}
+.nav-item i{font-size:16px;width:18px}
+.user-panel{padding:12px;border-top:1px solid var(--border)}
+.user-info{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(255,255,255,.04);border-radius:8px}
+.uavatar{width:30px;height:30px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:11px;font-weight:700;flex-shrink:0}
+.main{margin-left:250px;flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--navy2);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99}
+.badge{background:var(--gold);color:var(--navy);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.odot{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;margin-right:4px}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:all .2s}
+.btn-gold{background:var(--gold);color:var(--navy)}.btn-gold:hover{background:var(--gold2)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid rgba(231,76,60,.3)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+.btn-info{background:rgba(58,123,213,.15);color:#3a7bd5;border:1px solid rgba(58,123,213,.3)}
+.content{padding:20px 24px;flex:1}
+.page{display:none}.page.active{display:block}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.ml{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.mv{font-size:22px;font-weight:700;color:var(--gold2)}
+.ms{font-size:11px;color:var(--text3);margin-top:3px}
+.mi{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:18px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
+.ct{font-size:13px;font-weight:600;color:var(--gold3)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:9px 12px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(201,149,42,.04)}
+.st{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.s-paid{background:rgba(46,204,113,.15);color:#2ecc71}
+.s-pending{background:rgba(243,156,18,.15);color:#f39c12}
+.s-partial{background:rgba(58,123,213,.15);color:#3a7bd5}
+.s-overdue{background:rgba(231,76,60,.15);color:#e74c3c}
+.s-active{background:rgba(46,204,113,.15);color:#2ecc71}
+.s-complete{background:rgba(52,152,219,.15);color:#3498db}
+.pb{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-top:5px}
+.pf{height:100%;background:var(--gold);border-radius:3px}
+.fg{margin-bottom:12px}
+.fl{font-size:11px;color:var(--text3);margin-bottom:4px;display:block}
+.fi{width:100%;padding:8px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;transition:border-color .2s}
+.fi:focus{border-color:var(--gold)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.78);z-index:999;display:none;align-items:flex-start;justify-content:center;padding-top:30px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--navy2);border:1px solid var(--border);border-radius:12px;padding:24px;width:540px;max-width:96vw;margin-bottom:30px}
+.mt2{font-size:15px;font-weight:600;color:var(--gold2);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.xbtn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px}
+.xbtn:hover{color:var(--text)}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--navy)}
+.login-card{background:var(--navy2);border:1px solid var(--border);border-radius:14px;padding:36px;width:400px;max-width:95vw}
+.tab-bar{display:flex;margin-bottom:20px;background:rgba(255,255,255,.04);border-radius:7px;padding:3px}
+.tab{flex:1;padding:7px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px;color:var(--text3);transition:all .2s}
+.tab.active{background:var(--gold);color:var(--navy)}
+.alert{padding:10px 14px;border-radius:7px;font-size:12px;margin-bottom:12px}
+.al-d{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);color:#e74c3c}
+.al-s{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);color:#2ecc71}
+.al-w{background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);color:#f39c12}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty i{font-size:36px;margin-bottom:8px;display:block}
+.inv-bar{height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:3px}
+.inv-fill{height:100%;border-radius:4px}
+.cw{position:relative;height:240px}
+select.fi option{background:var(--navy2);color:var(--text)}
+.load-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+.spin{width:38px;height:38px;border:3px solid rgba(201,149,42,.2);border-top-color:var(--gold);border-radius:50%;animation:sp .8s linear infinite;margin-bottom:14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.atd{display:flex;gap:5px;flex-wrap:wrap}
+.search-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.search-bar .fi{width:auto;flex:1;min-width:140px}
+.inv-profile{background:linear-gradient(135deg,var(--navy2),#0d1f3c);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:18px}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(201,149,42,.15);color:var(--gold2);margin-right:4px}
+.receipt-area{background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:8px;padding:16px;margin-top:12px;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="load-screen" id="loadScreen">
+  <div class="spin"></div>
+  <div style="color:var(--gold2);font-size:14px;font-weight:600">Connecting to database...</div>
+  <div style="color:var(--text3);font-size:11px;margin-top:4px">Joelle-Tan Ltd</div>
+</div>
+
+<div id="loginScreen" class="login-screen" style="display:none">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:24px">
+      <img src="https://bigman-teks.github.io/Joelletanltd-farm/logo.png" alt="Joelle-Tan Ltd" style="width:120px;height:120px;object-fit:contain;margin:0 auto 8px;display:block" onerror="this.style.display='none'">
+      <div style="font-size:20px;font-weight:700;color:var(--gold2)">Joelle-Tan Ltd</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">Farm Project Management System</div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" onclick="setRole('admin',this)">Admin</div>
+      <div class="tab" onclick="setRole('investor',this)">Investor</div>
+    </div>
+    <div id="loginAlert" style="display:none"></div>
+    <div class="fg"><label class="fl">Username</label><input class="fi" id="loginUser" placeholder="Username"></div>
+    <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="loginPass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="invSelWrap" style="display:none">
+      <div class="fg"><label class="fl">Select Your Account</label><select class="fi" id="invSel"></select></div>
+    </div>
+    <button class="btn btn-gold" style="width:100%;justify-content:center;padding:10px;font-size:13px;margin-top:4px" onclick="doLogin()"><i class="ti ti-login"></i> Sign In</button>
+    <div style="margin-top:12px;text-align:center;font-size:10px;color:var(--text3)"><span class="odot"></span>Secured by Firebase Cloud</div>
+  </div>
+</div>
+
+<div id="mainApp" class="app" style="display:none">
+  <div class="sidebar">
+    <div class="logo">
+      <img src="https://bigman-teks.github.io/Joelletanltd-farm/logo.png" alt="logo" style="width:36px;height:36px;object-fit:contain;border-radius:6px;flex-shrink:0" onerror="this.outerHTML='<div style=\'width:36px;height:36px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:16px;flex-shrink:0\'><i class=\'ti ti-plant-2\'></i></div>'">
+      <div><div class="logo-text" id="sidebarName">Joelle-Tan Ltd</div><div class="logo-sub">Deals with Agriculture</div></div>
+    </div>
+    <nav>
+      <div class="nav-sec">Overview</div>
+      <div class="nav-item active" onclick="goPage('dashboard',this)"><i class="ti ti-dashboard"></i> Dashboard</div>
+      <div class="nav-item" onclick="goPage('products',this)"><i class="ti ti-plant"></i> Products & Cycles</div>
+      <div class="nav-sec" id="navFinSec">Finance</div>
+      <div class="nav-item" id="navIncome" onclick="goPage('income',this)"><i class="ti ti-trending-up"></i> Income</div>
+      <div class="nav-item" id="navExpenses" onclick="goPage('expenses',this)"><i class="ti ti-trending-down"></i> Expenses</div>
+      <div class="nav-sec">Investors</div>
+      <div class="nav-item" onclick="goPage('investors',this)"><i class="ti ti-users"></i> Investors</div>
+      <div class="nav-item" onclick="goPage('contributions',this)"><i class="ti ti-cash"></i> Contributions</div>
+      <div class="nav-item" onclick="goPage('roi',this)"><i class="ti ti-chart-line"></i> ROI & Returns</div>
+      <div class="nav-sec" id="navSysSec">System</div>
+      <div class="nav-item" id="navSettings" onclick="goPage('settings',this)"><i class="ti ti-settings"></i> Settings</div>
+    </nav>
+    <div class="user-panel">
+      <div class="user-info">
+        <div class="uavatar" id="userAvatar">A</div>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="userName">Admin</div>
+          <div style="font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px" id="userRole">Administrator</div>
+        </div>
+        <i class="ti ti-logout" style="cursor:pointer;color:var(--text3);font-size:15px;flex-shrink:0" onclick="doLogout()" title="Logout"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="font-size:15px;font-weight:600" id="pageTitle">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:var(--text3)"><span class="odot"></span>Live</span>
+        <span class="badge" id="seasonBadge">Season 2025</span>
+        <button class="btn btn-gold" id="addBtn" onclick="openAdd()" style="display:none"><i class="ti ti-plus"></i> Add New</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="g4" id="dashMetrics"></div>
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-bar" style="margin-right:5px"></i>Income vs Expenses</span></div><div class="cw"><canvas id="incExpChart"></canvas></div></div>
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-donut" style="margin-right:5px"></i>Investment Breakdown</span></div><div class="cw" id="invChartWrap"><canvas id="invChart"></canvas></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trophy" style="margin-right:5px"></i>Top Investors</span></div><div id="topInvList"></div></div>
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-receipt" style="margin-right:5px"></i>Recent Contributions</span></div><div id="recentContribs"></div></div>
+        </div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="page" id="page-products">
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-plant" style="margin-right:5px"></i>Product Cycles</span></div>
+        <table><thead><tr><th>#</th><th>Product</th><th>Category</th><th>Start</th><th>Due</th><th>Days</th><th>Target</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead><tbody id="productsTable"></tbody></table></div>
+      </div>
+
+      <!-- INCOME -->
+      <div class="page" id="page-income">
+        <div class="g3" id="incomeMetrics"></div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-up" style="margin-right:5px"></i>Income Records</span></div>
+        <table><thead><tr><th>#</th><th>Date</th><th>Source</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="incomeTable"></tbody></table></div>
+      </div>
+
+      <!-- EXPENSES -->
+      <div class="page" id="page-expenses">
+        <div class="g3" id="expenseMetrics"></div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-down" style="margin-right:5px"></i>Expense Records</span></div>
+        <table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="expenseTable"></tbody></table></div>
+      </div>
+
+      <!-- INVESTORS -->
+      <div class="page" id="page-investors">
+        <div class="g4" id="investorMetrics"></div>
+        <div class="card">
+          <div class="ch">
+            <span class="ct"><i class="ti ti-users" style="margin-right:5px"></i>Investor Profiles</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <input class="fi" id="invSearch" placeholder="Search name / email / phone..." style="width:220px" oninput="renderInvestors()">
+            </div>
+          </div>
+          <table><thead><tr><th>Rank</th><th>Name</th><th>Email</th><th>Phone</th><th>Total Contributed</th><th>Transactions</th><th>ROI Share</th><th>Status</th><th>Actions</th></tr></thead><tbody id="investorsTable"></tbody></table>
+        </div>
+      </div>
+
+      <!-- CONTRIBUTIONS -->
+      <div class="page" id="page-contributions">
+        <div class="g3" id="contribMetrics"></div>
+        <div class="card">
+          <div class="ch">
+            <span class="ct"><i class="ti ti-cash" style="margin-right:5px"></i>Contribution Records</span>
+          </div>
+          <div class="search-bar">
+            <input class="fi" id="cSearch" placeholder="Search investor name..." oninput="renderContributions()">
+            <select class="fi" id="cMonth" style="width:130px" onchange="renderContributions()">
+              <option value="">All Months</option>
+              <option>January</option><option>February</option><option>March</option><option>April</option>
+              <option>May</option><option>June</option><option>July</option><option>August</option>
+              <option>September</option><option>October</option><option>November</option><option>December</option>
+            </select>
+            <select class="fi" id="cYear" style="width:100px" onchange="renderContributions()">
+              <option value="">All Years</option>
+              <option>2024</option><option>2025</option><option>2026</option>
+            </select>
+            <select class="fi" id="cStatus" style="width:120px" onchange="renderContributions()">
+              <option value="">All Status</option>
+              <option>Paid</option><option>Pending</option><option>Partial</option><option>Overdue</option>
+            </select>
+          </div>
+          <table><thead><tr><th>#</th><th>Ref</th><th>Investor</th><th>Amount</th><th>Date</th><th>Month</th><th>Status</th><th>Note</th><th>Actions</th></tr></thead><tbody id="contribTable"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ROI -->
+      <div class="page" id="page-roi">
+        <div class="g3" id="roiMetrics"></div>
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-line" style="margin-right:5px"></i>ROI per Investor</span></div><div class="cw"><canvas id="roiChart"></canvas></div></div>
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trophy" style="margin-right:5px"></i>Leaderboard</span></div><div id="leaderboard"></div></div>
+        </div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-table" style="margin-right:5px"></i>ROI Breakdown</span></div>
+        <table><thead><tr><th>Rank</th><th>Investor</th><th>Total Contributed</th><th>Share %</th><th>Income Share</th><th>Total Return</th><th>ROI %</th><th>Transactions</th></tr></thead><tbody id="roiTable"></tbody></table></div>
+      </div>
+
+      <!-- INVESTOR PROFILE (investor view) -->
+      <div class="page" id="page-myprofile">
+        <div id="myProfileContent"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <div class="card">
+          <div class="ct" style="margin-bottom:14px"><i class="ti ti-building" style="margin-right:6px"></i>App Settings</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Company Name</label><input class="fi" id="set_name" placeholder="Joelle-Tan Ltd"></div>
+            <div class="fg"><label class="fl">Season Label</label><input class="fi" id="set_season" placeholder="Season 2025"></div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="saveSettings()"><i class="ti ti-check"></i> Save Settings</button>
+        </div>
+        <div class="card">
+          <div class="ct" style="margin-bottom:14px"><i class="ti ti-lock" style="margin-right:6px"></i>Change Admin Password</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Current Password</label><input class="fi" type="password" id="set_oldpass"></div>
+            <div class="fg"><label class="fl">New Password</label><input class="fi" type="password" id="set_newpass"></div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="changePass()"><i class="ti ti-key"></i> Change Password</button>
+          <div id="passAlert" style="display:none;margin-top:10px"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="mt2"><span id="modalTitle">Add Record</span><button class="xbtn" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div id="dupAlert" style="display:none;margin-bottom:12px"></div>
+    <div id="modalBody"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="saveBtn" onclick="saveModal()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVESTOR PROFILE MODAL -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal" style="width:620px">
+    <div class="mt2"><span id="profileModalTitle">Investor Profile</span><button class="xbtn" onclick="closeProfileModal()"><i class="ti ti-x"></i></button></div>
+    <div id="profileModalBody"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCqEsypUFYwgjZAlh-t9tAgrHVcoMxNsk8",
+  authDomain: "agrovest-farm.firebaseapp.com",
+  projectId: "agrovest-farm",
+  storageBucket: "agrovest-farm.firebasestorage.app",
+  messagingSenderId: "733245695876",
+  appId: "1:733245695876:web:01093acd9da48d32085fd1"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+const COLORS=['#c9952a','#e8b84b','#3a7bd5','#2ecc71','#9b59b6','#e74c3c','#1abc9c','#f39c12','#e67e22','#16a085'];
+let currentUser=null, loginRole='admin', currentInvestorId=null;
+let editMode=false, editId=null, curPage='income';
+let incExpCI=null, invCI=null, roiCI=null;
+let cfg={appName:'Joelle-Tan Ltd',season:'Season 2025',adminUser:'admin',adminPass:'admin123'};
+let data={investors:[],income:[],expenses:[],products:[],contributions:[]};
+let unsubs=[];
+
+// ===== FIREBASE =====
+async function fbAdd(col,obj){const r=await addDoc(collection(db,col),obj);return r.id}
+async function fbSet(col,id,obj){await setDoc(doc(db,col,id),obj)}
+async function fbUpd(col,id,obj){await updateDoc(doc(db,col,id),obj)}
+async function fbDel(col,id){await deleteDoc(doc(db,col,id))}
+async function loadCfg(){try{const d=await getDoc(doc(db,'config','app'));if(d.exists())Object.assign(cfg,d.data())}catch(e){}}
+async function saveCfg(){await setDoc(doc(db,'config','app'),cfg)}
+
+function subscribeAll(){
+  unsubs.forEach(u=>u());unsubs=[];
+  ['investors','income','expenses','products','contributions'].forEach(col=>{
+    unsubs.push(onSnapshot(collection(db,col),snap=>{
+      data[col]=snap.docs.map(d=>({...d.data(),_id:d.id}));
+      refreshPage();
+    }));
+  });
+}
+
+function refreshPage(){
+  const a=document.querySelector('.page.active');
+  if(!a)return;
+  const p=a.id.replace('page-','');
+  if(p==='dashboard')renderDashboard();
+  if(p==='products')renderProducts();
+  if(p==='income')renderIncome();
+  if(p==='expenses')renderExpenses();
+  if(p==='investors')renderInvestors();
+  if(p==='contributions')renderContributions();
+  if(p==='roi')renderROI();
+  if(p==='myprofile')renderMyProfile();
+}
+
+async function init(){
+  try{
+    await loadCfg();
+    document.getElementById('loadScreen').style.display='none';
+    document.getElementById('loginScreen').style.display='flex';
+    applyBranding();
+  }catch(e){
+    document.getElementById('loadScreen').innerHTML=`<div style="color:#e74c3c;text-align:center;padding:20px"><i class="ti ti-wifi-off" style="font-size:40px;display:block;margin-bottom:10px"></i>Cannot connect to database.<br><br><button class="btn btn-gold" onclick="location.reload()">Retry</button></div>`;
+  }
+}
+
+function applyBranding(){
+  document.getElementById('sidebarName').textContent=cfg.appName;
+  document.getElementById('seasonBadge').textContent=cfg.season;
+  document.title=cfg.appName;
+}
+
+// ===== AUTH =====
+window.setRole=function(r,el){
+  loginRole=r;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const w=document.getElementById('invSelWrap');
+  if(r==='investor'){
+    w.style.display='block';
+    const sel=document.getElementById('invSel');
+    sel.innerHTML=data.investors.length?data.investors.map(i=>`<option value="${i._id}">${i.full_name} (${i.username||i.email||'—'})</option>`).join(''):'<option>No investors yet</option>';
+  } else w.style.display='none';
+}
+
+window.doLogin=function(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value.trim();
+  const al=document.getElementById('loginAlert');
+  if(loginRole==='admin'){
+    if(u===cfg.adminUser&&p===cfg.adminPass){currentUser={role:'admin',name:'Admin'};launchApp();}
+    else showAl(al,'Invalid admin credentials','d');
+  } else {
+    const inv=data.investors.find(i=>i._id===document.getElementById('invSel').value);
+    if(!inv){showAl(al,'No investor accounts yet','d');return;}
+    if(u===inv.username&&p===(inv.password||'inv123')){
+      currentUser={role:'investor',name:inv.full_name};
+      currentInvestorId=inv._id;
+      launchApp();
+    } else showAl(al,'Invalid credentials. Use your assigned username & password.','d');
+  }
+}
+
+function launchApp(){
+  subscribeAll();
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('mainApp').style.display='flex';
+  document.getElementById('userName').textContent=currentUser.name;
+  document.getElementById('userRole').textContent=currentUser.role==='admin'?'Administrator':'Investor';
+  document.getElementById('userAvatar').textContent=currentUser.name.charAt(0).toUpperCase();
+  if(currentUser.role==='investor'){
+    ['navFinSec','navIncome','navExpenses','navSysSec','navSettings'].forEach(id=>document.getElementById(id).style.display='none');
+    document.querySelector('[onclick="goPage(\'investors\',this)"]').style.display='none';
+    document.querySelector('[onclick="goPage(\'contributions\',this)"]').style.display='none';
+    document.querySelector('[onclick="goPage(\'roi\',this)"]').style.display='none';
+    goPage('myprofile',document.querySelector('.nav-item'));
+  } else {
+    goPage('dashboard',document.querySelector('.nav-item'));
+  }
+}
+
+window.doLogout=function(){
+  unsubs.forEach(u=>u());unsubs=[];
+  currentUser=null;currentInvestorId=null;
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+  ['navFinSec','navIncome','navExpenses','navSysSec','navSettings'].forEach(id=>document.getElementById(id).style.display='');
+  document.querySelectorAll('.nav-item').forEach(n=>n.style.display='');
+}
+
+// ===== NAV =====
+window.goPage=function(page,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('pageTitle').textContent=el?el.textContent.trim():page;
+  const adm=['dashboard','income','expenses','investors','products','contributions'];
+  document.getElementById('addBtn').style.display=(currentUser?.role==='admin'&&adm.includes(page))?'flex':'none';
+  curPage=page==='income'?'income':page==='expenses'?'expense':page==='investors'?'investor':page==='products'?'product':page==='contributions'?'contribution':'income';
+  if(page==='settings')loadSettingsForm();
+  refreshPage();
+}
+
+// ===== CALCS =====
+const fN=n=>'₦'+Math.round(n||0).toLocaleString('en-NG');
+const tInc=()=>data.income.reduce((s,r)=>s+Number(r.amount||0),0);
+const tExp=()=>data.expenses.reduce((s,r)=>s+Number(r.amount||0),0);
+const tInvAmt=()=>data.investors.reduce((s,r)=>s+invTotal(r._id),0);
+const tContrib=()=>data.contributions.filter(c=>c.status==='Paid').reduce((s,r)=>s+Number(r.amount||0),0);
+const bal=()=>tInc()-tExp();
+const invTotal=id=>data.contributions.filter(c=>c.investor_id===id&&c.status==='Paid').reduce((s,r)=>s+Number(r.amount||0),0);
+const invTxCount=id=>data.contributions.filter(c=>c.investor_id===id).length;
+const invShare=id=>{const t=tInvAmt();return t>0?(invTotal(id)/t)*tInc():0};
+const invROI=id=>{const tot=invTotal(id);return tot>0?((invShare(id)/tot)*100):0};
+const dBetween=(s,e)=>Math.round((new Date(e)-new Date(s))/86400000);
+const pct=(s,e)=>{const t=dBetween(s,e),el=Math.max(0,dBetween(s,new Date().toISOString().split('T')[0]));return t<=0?100:Math.min(100,Math.round(el/t*100))};
+const empty=msg=>`<div class="empty"><i class="ti ti-database-off"></i><p>${msg}</p></div>`;
+const sc={Active:'s-active',Complete:'s-complete',Pending:'s-pending',Paid:'s-paid',Partial:'s-partial',Overdue:'s-overdue'};
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function genRef(){return 'JT-'+Date.now().toString(36).toUpperCase().slice(-6)}
+
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const totalInvs=data.investors.length, totalContrib=tContrib(), pendingCount=data.contributions.filter(c=>c.status==='Pending'||c.status==='Overdue').length;
+  const m=[
+    {l:'Total Investors',v:totalInvs,i:'ti-users',c:'#c9952a',s:'Registered accounts'},
+    {l:'Total Contributions',v:fN(totalContrib),i:'ti-cash',c:'#2ecc71',s:'All paid contributions'},
+    {l:'Farm Balance',v:fN(bal()),i:'ti-wallet',c:'#3a7bd5',s:'Income − Expenses'},
+    {l:'Pending Payments',v:pendingCount,i:'ti-clock',c:'#f39c12',s:'Awaiting confirmation'},
+  ];
+  document.getElementById('dashMetrics').innerHTML=m.map(m=>`<div class="mc"><div class="mi" style="background:${m.c}22;color:${m.c}"><i class="ti ${m.i}"></i></div><div class="ml">${m.l}</div><div class="mv">${m.v}</div><div class="ms">${m.s}</div></div>`).join('');
+
+  const iM=Array(12).fill(0),eM=Array(12).fill(0);
+  data.income.forEach(r=>{iM[new Date(r.date).getMonth()]+=Number(r.amount||0)});
+  data.expenses.forEach(r=>{eM[new Date(r.date).getMonth()]+=Number(r.amount||0)});
+  if(incExpCI)incExpCI.destroy();
+  incExpCI=new Chart(document.getElementById('incExpChart'),{type:'bar',data:{labels:months,datasets:[{label:'Income',data:iM,backgroundColor:'rgba(46,204,113,.7)',borderRadius:3},{label:'Expenses',data:eM,backgroundColor:'rgba(231,76,60,.7)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6a7d95',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6a7d95',font:{size:9},callback:v=>'₦'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.05)'}}}}});
+
+  const wrap=document.getElementById('invChartWrap');
+  if(invCI){invCI.destroy();invCI=null;}
+  if(data.investors.length){
+    if(!wrap.querySelector('canvas'))wrap.innerHTML='<canvas id="invChart"></canvas>';
+    const invAmts=data.investors.map(i=>invTotal(i._id));
+    invCI=new Chart(document.getElementById('invChart'),{type:'doughnut',data:{labels:data.investors.map(i=>i.full_name.split(' ')[0]),datasets:[{data:invAmts,backgroundColor:COLORS,borderWidth:2,borderColor:'#112240'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});
+  } else wrap.innerHTML=empty('No investors yet');
+
+  const sorted=[...data.investors].sort((a,b)=>invTotal(b._id)-invTotal(a._id)).slice(0,5);
+  const max=sorted[0]?invTotal(sorted[0]._id):1;
+  document.getElementById('topInvList').innerHTML=sorted.length?sorted.map((inv,i)=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:${i===0?'var(--gold2)':'var(--text2)'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)} ${inv.full_name}</span><span style="color:var(--gold);font-weight:600">${fN(invTotal(inv._id))}</span></div><div class="inv-bar"><div class="inv-fill" style="width:${max?((invTotal(inv._id)/max)*100).toFixed(1):0}%;background:${COLORS[i]}"></div></div></div>`).join(''):empty('No investors yet');
+
+  const recent=[...data.contributions].sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date)).slice(0,5);
+  document.getElementById('recentContribs').innerHTML=recent.length?recent.map(c=>{const inv=data.investors.find(i=>i._id===c.investor_id);return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div><div style="font-size:12px;color:var(--text);font-weight:500">${inv?.full_name||'Unknown'}</div><div style="font-size:10px;color:var(--text3)">${c.payment_date} · ${c.ref||'—'}</div></div><div style="text-align:right"><div style="font-size:12px;color:#2ecc71;font-weight:600">${fN(c.amount)}</div><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></div></div>`}).join(''):empty('No contributions yet');
+}
+
+// ===== PRODUCTS =====
+function renderProducts(){
+  const isAdmin=currentUser?.role==='admin';
+  document.getElementById('productsTable').innerHTML=data.products.length?data.products.map((p,i)=>{const p2=pct(p.start,p.due);return `<tr><td style="color:var(--text3)">${i+1}</td><td style="color:var(--text);font-weight:500">${p.name}</td><td>${p.category||'—'}</td><td>${p.start}</td><td>${p.due}</td><td>${dBetween(p.start,p.due)}</td><td style="color:var(--gold)">${fN(p.target||0)}</td><td style="min-width:90px"><div class="pb"><div class="pf" style="width:${p2}%"></div></div><span style="font-size:10px;color:var(--text3)">${p2}%</span></td><td><span class="st ${sc[p.status]||'s-pending'}">${p.status}</span></td><td>${isAdmin?`<div class="atd"><button class="btn btn-outline btn-sm" onclick="window.editRec('product','${p._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.delRec('product','${p._id}')"><i class="ti ti-trash"></i></button></div>`:'—'}</td></tr>`}).join(''):`<tr><td colspan="10">${empty('No products')}</td></tr>`;
+}
+
+// ===== INCOME =====
+function renderIncome(){
+  const tot=tInc();const cats=[...new Set(data.income.map(r=>r.category))];
+  const isAdmin=currentUser?.role==='admin';
+  document.getElementById('incomeMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Total Income</div><div class="mv">${fN(tot)}</div><div class="ms">${data.income.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-receipt"></i></div><div class="ml">Avg Transaction</div><div class="mv">${data.income.length?fN(tot/data.income.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-category"></i></div><div class="ml">Categories</div><div class="mv">${cats.length}</div><div class="ms">${cats.slice(0,3).join(', ')||'None'}</div></div>`;
+  document.getElementById('incomeTable').innerHTML=data.income.length?[...data.income].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td style="color:var(--text);font-weight:500">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td>${isAdmin?`<div class="atd"><button class="btn btn-outline btn-sm" onclick="window.editRec('income','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.delRec('income','${r._id}')"><i class="ti ti-trash"></i></button></div>`:'—'}</td></tr>`).join(''):`<tr><td colspan="7">${empty('No income records')}</td></tr>`;
+}
+
+// ===== EXPENSES =====
+function renderExpenses(){
+  const tot=tExp();const isAdmin=currentUser?.role==='admin';
+  document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">Total Expenses</div><div class="mv">${fN(tot)}</div><div class="ms">${data.expenses.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${data.expenses.length?fN(tot/data.expenses.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-chart-pie"></i></div><div class="ml">Balance</div><div class="mv">${fN(bal())}</div><div class="ms">Income − Expenses</div></div>`;
+  document.getElementById('expenseTable').innerHTML=data.expenses.length?[...data.expenses].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td style="color:var(--text);font-weight:500">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td>${isAdmin?`<div class="atd"><button class="btn btn-outline btn-sm" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div>`:'—'}</td></tr>`).join(''):`<tr><td colspan="7">${empty('No expenses')}</td></tr>`;
+}
+
+// ===== INVESTORS =====
+window.renderInvestors=function(){
+  const q=(document.getElementById('invSearch')?.value||'').toLowerCase();
+  let list=[...data.investors].sort((a,b)=>invTotal(b._id)-invTotal(a._id));
+  if(q) list=list.filter(i=>(i.full_name||'').toLowerCase().includes(q)||(i.email||'').toLowerCase().includes(q)||(i.phone||'').toLowerCase().includes(q));
+  const isAdmin=currentUser?.role==='admin';
+  const tInvTotal=tInvAmt()||1;
+  document.getElementById('investorMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-users"></i></div><div class="ml">Total Investors</div><div class="mv">${data.investors.length}</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Total Contributions</div><div class="mv">${fN(tContrib())}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-receipt"></i></div><div class="ml">Total Transactions</div><div class="mv">${data.contributions.length}</div></div><div class="mc"><div class="mi" style="background:#9b59b622;color:#9b59b6"><i class="ti ti-clock"></i></div><div class="ml">Pending Payments</div><div class="mv">${data.contributions.filter(c=>c.status==='Pending'||c.status==='Overdue').length}</div></div>`;
+  document.getElementById('investorsTable').innerHTML=list.length?list.map((inv,i)=>`<tr>
+    <td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td>
+    <td style="color:var(--text);font-weight:500">${inv.full_name}<br><span style="font-size:10px;color:var(--text3)">@${inv.username||'—'}</span></td>
+    <td style="color:var(--text3)">${inv.email||'—'}</td>
+    <td style="color:var(--text3)">${inv.phone||'—'}</td>
+    <td style="color:var(--gold);font-weight:600">${fN(invTotal(inv._id))}</td>
+    <td style="color:var(--text2)">${invTxCount(inv._id)}</td>
+    <td style="color:#2ecc71">${invROI(inv._id).toFixed(1)}%</td>
+    <td><span class="st ${sc[inv.status]||'s-active'}">${inv.status||'Active'}</span></td>
+    <td><div class="atd">
+      <button class="btn btn-info btn-sm" onclick="window.showProfile('${inv._id}')"><i class="ti ti-eye"></i></button>
+      ${isAdmin?`<button class="btn btn-outline btn-sm" onclick="window.editRec('investor','${inv._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.delRec('investor','${inv._id}')"><i class="ti ti-trash"></i></button>`:''}
+    </div></td>
+  </tr>`).join(''):`<tr><td colspan="9">${empty('No investors found')}</td></tr>`;
+}
+
+// ===== CONTRIBUTIONS =====
+window.renderContributions=function(){
+  const q=(document.getElementById('cSearch')?.value||'').toLowerCase();
+  const mon=document.getElementById('cMonth')?.value||'';
+  const yr=document.getElementById('cYear')?.value||'';
+  const st=document.getElementById('cStatus')?.value||'';
+  const isAdmin=currentUser?.role==='admin';
+  let list=[...data.contributions].sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  if(q) list=list.filter(c=>{const inv=data.investors.find(i=>i._id===c.investor_id);return (inv?.full_name||'').toLowerCase().includes(q)||(c.ref||'').toLowerCase().includes(q)});
+  if(mon) list=list.filter(c=>{const m=new Date(c.payment_date).toLocaleString('default',{month:'long'});return m===mon});
+  if(yr) list=list.filter(c=>new Date(c.payment_date).getFullYear().toString()===yr);
+  if(st) list=list.filter(c=>c.status===st);
+  const totPaid=list.filter(c=>c.status==='Paid').reduce((s,c)=>s+Number(c.amount||0),0);
+  document.getElementById('contribMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Filtered Total</div><div class="mv">${fN(totPaid)}</div><div class="ms">${list.filter(c=>c.status==='Paid').length} paid</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-receipt"></i></div><div class="ml">Transactions Shown</div><div class="mv">${list.length}</div></div><div class="mc"><div class="mi" style="background:#f3931222;color:#f39c12"><i class="ti ti-clock"></i></div><div class="ml">Pending Amount</div><div class="mv">${fN(list.filter(c=>c.status==='Pending'||c.status==='Overdue').reduce((s,c)=>s+Number(c.amount||0),0))}</div></div>`;
+  document.getElementById('contribTable').innerHTML=list.length?list.map((c,i)=>{const inv=data.investors.find(i=>i._id===c.investor_id);return `<tr>
+    <td style="color:var(--text3)">${i+1}</td>
+    <td><span class="tag">${c.ref||'—'}</span></td>
+    <td style="color:var(--text);font-weight:500">${inv?.full_name||'Unknown'}</td>
+    <td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td>
+    <td>${c.payment_date}</td>
+    <td style="color:var(--text3)">${c.month||'—'}</td>
+    <td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td>
+    <td style="color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.note||'—'}</td>
+    <td>${isAdmin?`<div class="atd"><button class="btn btn-outline btn-sm" onclick="window.editRec('contribution','${c._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.delRec('contribution','${c._id}')"><i class="ti ti-trash"></i></button></div>`:'—'}</td>
+  </tr>`}).join(''):`<tr><td colspan="9">${empty('No contributions found')}</td></tr>`;
+}
+
+// ===== ROI =====
+function renderROI(){
+  const sorted=[...data.investors].sort((a,b)=>invTotal(b._id)-invTotal(a._id));
+  document.getElementById('roiMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-cash"></i></div><div class="ml">Total Contributions</div><div class="mv">${fN(tContrib())}</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-trending-up"></i></div><div class="ml">Total Farm Income</div><div class="mv">${fN(tInc())}</div><div class="ms">Shared proportionally</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-chart-arrows-vertical"></i></div><div class="ml">Net Farm Profit</div><div class="mv">${fN(bal()-tContrib())}</div><div class="ms">After contributions</div></div>`;
+  if(roiCI){roiCI.destroy();roiCI=null;}
+  if(sorted.length){
+    roiCI=new Chart(document.getElementById('roiChart'),{type:'bar',data:{labels:sorted.map(i=>i.full_name.split(' ')[0]),datasets:[{label:'ROI %',data:sorted.map(i=>invROI(i._id)),backgroundColor:COLORS,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6a7d95',callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#a8b4c8',font:{size:10}},grid:{display:false}}}}});
+  }
+  document.getElementById('leaderboard').innerHTML=sorted.length?sorted.map((inv,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:26px;height:26px;border-radius:50%;background:${COLORS[i]||'#888'}22;color:${COLORS[i]||'#888'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inv.full_name}</div><div style="font-size:10px;color:var(--text3)">${fN(invTotal(inv._id))} contributed</div></div><div style="text-align:right"><div style="font-size:12px;color:#2ecc71;font-weight:600">${fN(invShare(inv._id))}</div><div style="font-size:10px;color:var(--text3)">${invROI(inv._id).toFixed(1)}% ROI</div></div></div>`).join(''):empty('No investors yet');
+  const tInvTotal=tInvAmt()||1;
+  document.getElementById('roiTable').innerHTML=sorted.length?sorted.map((inv,i)=>{const tot=invTotal(inv._id);const share=invShare(inv._id);return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="color:var(--text);font-weight:500">${inv.full_name}</td><td style="color:var(--gold)">${fN(tot)}</td><td style="color:#3a7bd5">${((tot/tInvTotal)*100).toFixed(1)}%</td><td style="color:#2ecc71">${fN(share)}</td><td style="color:var(--gold2);font-weight:600">${fN(tot+share)}</td><td style="color:var(--gold);font-weight:700">${invROI(inv._id).toFixed(1)}%</td><td>${invTxCount(inv._id)}</td></tr>`}).join(''):`<tr><td colspan="8">${empty('No data')}</td></tr>`;
+}
+
+// ===== INVESTOR PROFILE (own view) =====
+function renderMyProfile(){
+  if(!currentInvestorId) return;
+  const inv=data.investors.find(i=>i._id===currentInvestorId);
+  if(!inv){document.getElementById('myProfileContent').innerHTML=empty('Profile not found');return;}
+  const txs=data.contributions.filter(c=>c.investor_id===currentInvestorId).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  const tot=invTotal(currentInvestorId);
+  const share=invShare(currentInvestorId);
+  document.getElementById('myProfileContent').innerHTML=`
+    <div class="inv-profile">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:22px;font-weight:700;flex-shrink:0">${inv.full_name.charAt(0)}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--gold2)">${inv.full_name}</div>
+          <div style="font-size:11px;color:var(--text3)">ID: ${inv._id.slice(-8).toUpperCase()} &nbsp;|&nbsp; ${inv.email||'—'} &nbsp;|&nbsp; ${inv.phone||'—'}</div>
+          <span class="st ${sc[inv.status]||'s-active'}" style="margin-top:4px;display:inline-block">${inv.status||'Active'}</span>
+        </div>
+      </div>
+      <div class="g4">
+        <div class="mc"><div class="ml">Total Contributed</div><div class="mv">${fN(tot)}</div><div class="ms">${txs.filter(t=>t.status==='Paid').length} paid transactions</div></div>
+        <div class="mc"><div class="ml">Income Share (ROI)</div><div class="mv">${fN(share)}</div><div class="ms">Proportional farm income</div></div>
+        <div class="mc"><div class="ml">Total Return</div><div class="mv">${fN(tot+share)}</div><div class="ms">Contribution + Income share</div></div>
+        <div class="mc"><div class="ml">ROI %</div><div class="mv">${invROI(currentInvestorId).toFixed(1)}%</div><div class="ms">Based on farm income</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct"><i class="ti ti-plant" style="margin-right:5px"></i>Active Farm Products</span></div>
+      ${data.products.length?`<table><thead><tr><th>#</th><th>Product</th><th>Category</th><th>Start</th><th>Due</th><th>Target</th><th>Progress</th><th>Status</th></tr></thead><tbody>${data.products.map((p,i)=>{const p2=pct(p.start,p.due);return `<tr><td style="color:var(--text3)">${i+1}</td><td style="color:var(--text);font-weight:500">${p.name}</td><td>${p.category||'—'}</td><td>${p.start}</td><td>${p.due}</td><td style="color:var(--gold)">${fN(p.target||0)}</td><td style="min-width:90px"><div class="pb"><div class="pf" style="width:${p2}%"></div></div><span style="font-size:10px;color:var(--text3)">${p2}%</span></td><td><span class="st ${sc[p.status]||'s-pending'}">${p.status}</span></td></tr>`}).join('')}</tbody></table>`:empty('No products added yet')}
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct"><i class="ti ti-receipt" style="margin-right:5px"></i>My Payment History</span>
+      <button class="btn btn-outline btn-sm" onclick="window.printReceipt('${inv._id}')"><i class="ti ti-printer"></i> Print Receipt</button></div>
+      <table><thead><tr><th>#</th><th>Ref</th><th>Amount</th><th>Date</th><th>Month</th><th>Status</th><th>Note</th></tr></thead>
+      <tbody>${txs.length?txs.map((c,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td><span class="tag">${c.ref||'—'}</span></td><td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td><td>${c.payment_date}</td><td style="color:var(--text3)">${c.month||'—'}</td><td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td><td style="color:var(--text3)">${c.note||'—'}</td></tr>`).join(''):(`<tr><td colspan="7">${empty('No transactions yet')}</td></tr>`)}</tbody>
+      </table>
+    </div>`;
+}
+
+// ===== SHOW INVESTOR PROFILE MODAL =====
+window.showProfile=function(id){
+  const inv=data.investors.find(i=>i._id===id);
+  if(!inv)return;
+  const txs=data.contributions.filter(c=>c.investor_id===id).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  const tot=invTotal(id);const share=invShare(id);
+  document.getElementById('profileModalTitle').textContent=inv.full_name+' — Profile';
+  document.getElementById('profileModalBody').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="mc" style="flex:1"><div class="ml">Total Contributed</div><div class="mv">${fN(tot)}</div><div class="ms">${txs.filter(t=>t.status==='Paid').length} paid tx</div></div>
+      <div class="mc" style="flex:1"><div class="ml">Income Share</div><div class="mv">${fN(share)}</div></div>
+      <div class="mc" style="flex:1"><div class="ml">ROI %</div><div class="mv">${invROI(id).toFixed(1)}%</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Email: ${inv.email||'—'} &nbsp;|&nbsp; Phone: ${inv.phone||'—'} &nbsp;|&nbsp; Username: @${inv.username||'—'}</div>
+    <table style="font-size:11px"><thead><tr><th>Ref</th><th>Amount</th><th>Date</th><th>Month</th><th>Status</th><th>Note</th></tr></thead>
+    <tbody>${txs.length?txs.map(c=>`<tr><td><span class="tag">${c.ref||'—'}</span></td><td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td><td>${c.payment_date}</td><td>${c.month||'—'}</td><td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td><td style="color:var(--text3)">${c.note||'—'}</td></tr>`).join(''):`<tr><td colspan="6">${empty('No transactions')}</td></tr>`}</tbody></table>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline btn-sm" onclick="window.printReceipt('${id}')"><i class="ti ti-printer"></i> Print Receipt</button>
+      <button class="btn btn-gold btn-sm" onclick="window.addContribForInv('${id}')"><i class="ti ti-plus"></i> Add Contribution</button>
+    </div>`;
+  document.getElementById('profileModal').classList.add('open');
+}
+window.closeProfileModal=function(){document.getElementById('profileModal').classList.remove('open')}
+document.getElementById('profileModal').addEventListener('click',function(e){if(e.target===this)window.closeProfileModal()});
+
+window.addContribForInv=function(id){
+  window.closeProfileModal();
+  curPage='contribution';
+  editMode=false;editId=null;
+  renderForm(null,id);
+  document.getElementById('addModal').classList.add('open');
+  document.getElementById('modalTitle').textContent='Add Contribution';
+}
+
+// ===== PRINT RECEIPT =====
+window.printReceipt=function(id){
+  const inv=data.investors.find(i=>i._id===id);
+  if(!inv)return;
+  const txs=data.contributions.filter(c=>c.investor_id===id).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  const tot=invTotal(id);
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Receipt - ${inv.full_name}</title>
+  <style>body{font-family:'Segoe UI',sans-serif;padding:30px;color:#111;max-width:600px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}.sub{color:#666;font-size:12px;margin-bottom:20px}
+  .hdr{display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #c9952a}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:16px}
+  th{background:#0a1628;color:#e8b84b;padding:8px 10px;text-align:left}
+  td{padding:8px 10px;border-bottom:1px solid #eee}
+  .total{font-weight:700;font-size:14px;margin-top:16px;text-align:right;color:#0a1628}
+  .footer{margin-top:30px;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px}
+  @media print{button{display:none}}</style></head><body>
+  <div class="hdr"><div><h1>Joelle-Tan Ltd</h1><div class="sub">Deals with Agriculture — Contribution Statement</div></div><div style="text-align:right"><div style="font-weight:700">${inv.full_name}</div><div class="sub">${inv.email||''} | ${inv.phone||''}</div></div></div>
+  <table><thead><tr><th>Ref</th><th>Amount</th><th>Date</th><th>Month</th><th>Status</th><th>Note</th></tr></thead><tbody>
+  ${txs.map(c=>`<tr><td>${c.ref||'—'}</td><td>₦${Math.round(c.amount||0).toLocaleString()}</td><td>${c.payment_date}</td><td>${c.month||'—'}</td><td>${c.status}</td><td>${c.note||'—'}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="total">Total Contributed: ₦${Math.round(tot).toLocaleString()}</div>
+  <div class="footer">Printed on ${new Date().toLocaleString()} · Joelle-Tan Ltd Farm Management System</div>
+  <br><button onclick="window.print()" style="padding:8px 18px;background:#c9952a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px">🖨️ Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+// ===== MODAL =====
+window.openAdd=function(){editMode=false;editId=null;renderForm(null,null);document.getElementById('addModal').classList.add('open')}
+window.closeModal=function(){document.getElementById('addModal').classList.remove('open');document.getElementById('dupAlert').style.display='none'}
+document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)window.closeModal()});
+
+window.editRec=function(type,id){
+  editMode=true;editId=id;curPage=type;
+  const arr=type==='income'?data.income:type==='expense'?data.expenses:type==='investor'?data.investors:type==='contribution'?data.contributions:data.products;
+  const rec=arr.find(r=>r._id===id);
+  renderForm(rec,null);
+  document.getElementById('addModal').classList.add('open');
+}
+
+window.delRec=async function(type,id){
+  if(!confirm('Delete this record? This cannot be undone.'))return;
+  const col=type==='income'?'income':type==='expense'?'expenses':type==='investor'?'investors':type==='contribution'?'contributions':'products';
+  try{await fbDel(col,id);}catch(e){alert('Error: '+e.message);}
+}
+
+function renderForm(rec,preselInvId){
+  const v=f=>rec&&rec[f]!==undefined?rec[f]:'';
+  const titles={income:'Income Record',expense:'Expense Record',investor:'Investor Profile',product:'Product Cycle',contribution:'Contribution'};
+  document.getElementById('modalTitle').textContent=(editMode?'Edit ':'Add ')+titles[curPage];
+  let h='';
+  if(curPage==='investor') h=`
+    <div class="fr"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="f_name" placeholder="Full name" value="${v('full_name')}"></div>
+    <div class="fg"><label class="fl">Username *</label><input class="fi" id="f_uname" placeholder="e.g. john_doe" value="${v('username')}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Email</label><input class="fi" id="f_email" placeholder="email@example.com" value="${v('email')}"></div>
+    <div class="fg"><label class="fl">Phone</label><input class="fi" id="f_phone" placeholder="+234..." value="${v('phone')}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Password (for investor login)</label><input class="fi" id="f_pass" placeholder="Default: inv123" value="${v('password')}"></div>
+    <div class="fg"><label class="fl">Status</label><select class="fi" id="f_status"><option ${v('status')==='Active'?'selected':''}>Active</option><option ${v('status')==='Inactive'?'selected':''}>Inactive</option></select></div></div>
+    <div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" placeholder="Optional notes" value="${v('notes')}"></div>`;
+  else if(curPage==='contribution'){
+    const invOpts=data.investors.map(i=>`<option value="${i._id}" ${(preselInvId===i._id||v('investor_id')===i._id)?'selected':''}>${i.full_name}</option>`).join('');
+    h=`<div class="fg"><label class="fl">Investor *</label><select class="fi" id="f_inv_id" onchange="window.checkDupContrib()">${invOpts||'<option>No investors yet</option>'}</select></div>
+    <div class="fr"><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" placeholder="0" value="${v('amount')}"></div>
+    <div class="fg"><label class="fl">Payment Date *</label><input class="fi" type="date" id="f_date" value="${v('payment_date')}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Month *</label><select class="fi" id="f_month"><option ${v('month')==='January'?'selected':''}>January</option><option ${v('month')==='February'?'selected':''}>February</option><option ${v('month')==='March'?'selected':''}>March</option><option ${v('month')==='April'?'selected':''}>April</option><option ${v('month')==='May'?'selected':''}>May</option><option ${v('month')==='June'?'selected':''}>June</option><option ${v('month')==='July'?'selected':''}>July</option><option ${v('month')==='August'?'selected':''}>August</option><option ${v('month')==='September'?'selected':''}>September</option><option ${v('month')==='October'?'selected':''}>October</option><option ${v('month')==='November'?'selected':''}>November</option><option ${v('month')==='December'?'selected':''}>December</option></select></div>
+    <div class="fg"><label class="fl">Status</label><select class="fi" id="f_status"><option ${v('status')==='Paid'?'selected':''}>Paid</option><option ${v('status')==='Pending'?'selected':''}>Pending</option><option ${v('status')==='Partial'?'selected':''}>Partial</option><option ${v('status')==='Overdue'?'selected':''}>Overdue</option></select></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Ref (auto-generated)</label><input class="fi" id="f_ref" placeholder="Auto" value="${v('ref')||genRef()}"></div>
+    <div class="fg"><label class="fl">Note</label><input class="fi" id="f_note" placeholder="Optional" value="${v('note')}"></div></div>`;
+  }
+  else if(curPage==='income') h=`<div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Source *</label><input class="fi" id="f_source" placeholder="e.g. Maize Sales" value="${v('source')}"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Crop Sales'?'selected':''}>Crop Sales</option><option ${v('category')==='Export'?'selected':''}>Export</option><option ${v('category')==='Grant'?'selected':''}>Grant</option><option ${v('category')==='Other'?'selected':''}>Other</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
+  else if(curPage==='expense') h=`<div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Description *</label><input class="fi" id="f_desc" placeholder="e.g. Fertilizer" value="${v('desc')}"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Farm Input'?'selected':''}>Farm Input</option><option ${v('category')==='Labour'?'selected':''}>Labour</option><option ${v('category')==='Infrastructure'?'selected':''}>Infrastructure</option><option ${v('category')==='Logistics'?'selected':''}>Logistics</option><option ${v('category')==='Maintenance'?'selected':''}>Maintenance</option><option ${v('category')==='Operations'?'selected':''}>Operations</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
+  else if(curPage==='product') h=`<div class="fr"><div class="fg"><label class="fl">Product Name *</label><input class="fi" id="f_name" value="${v('name')}"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Vegetable'?'selected':''}>Vegetable</option><option ${v('category')==='Cereal'?'selected':''}>Cereal</option><option ${v('category')==='Root Crop'?'selected':''}>Root Crop</option><option ${v('category')==='Fruit'?'selected':''}>Fruit</option></select></div></div><div class="fr"><div class="fg"><label class="fl">Start Date *</label><input class="fi" type="date" id="f_start" value="${v('start')}"></div><div class="fg"><label class="fl">Due Date *</label><input class="fi" type="date" id="f_due" value="${v('due')}"></div></div><div class="fr"><div class="fg"><label class="fl">Revenue Target (₦)</label><input class="fi" type="number" id="f_target" value="${v('target')}"></div><div class="fg"><label class="fl">Status</label><select class="fi" id="f_status"><option ${v('status')==='Active'?'selected':''}>Active</option><option ${v('status')==='Pending'?'selected':''}>Pending</option><option ${v('status')==='Complete'?'selected':''}>Complete</option></select></div></div>`;
+  document.getElementById('modalBody').innerHTML=h;
+}
+
+// Duplicate contribution check
+window.checkDupContrib=function(){
+  const invId=document.getElementById('f_inv_id')?.value;
+  const month=document.getElementById('f_month')?.value;
+  const al=document.getElementById('dupAlert');
+  if(!invId||!month||editMode){al.style.display='none';return;}
+  const exists=data.contributions.some(c=>c.investor_id===invId&&c.month===month&&c.status==='Paid');
+  if(exists){
+    al.className='alert al-w';al.textContent=`⚠️ A PAID contribution for this investor already exists for ${month}. Adding this will create an additional transaction.`;al.style.display='block';
+  } else al.style.display='none';
+}
+
+window.saveModal=async function(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value:''};
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
+  const dupAl=document.getElementById('dupAlert');
+  try{
+    let rec=null,col='';
+    if(curPage==='investor'&&g('f_name')&&g('f_uname')){
+      // Check for duplicate investor
+      if(!editMode){
+        const dup=data.investors.find(i=>(i.username||'').toLowerCase()===(g('f_uname')||'').toLowerCase()||(i.email&&g('f_email')&&i.email.toLowerCase()===g('f_email').toLowerCase())||(i.phone&&g('f_phone')&&i.phone===g('f_phone')));
+        if(dup){dupAl.className='alert al-d';dupAl.textContent='⛔ Investor already exists with this username/email/phone. Transaction added to existing account.';dupAl.style.display='block';btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save';return;}
+      }
+      rec={full_name:g('f_name'),username:g('f_uname'),email:g('f_email'),phone:g('f_phone'),password:g('f_pass')||'inv123',status:g('f_status'),notes:g('f_notes')};col='investors';
+    } else if(curPage==='contribution'&&g('f_inv_id')&&g('f_amount')&&g('f_date')){
+      rec={investor_id:g('f_inv_id'),amount:parseFloat(g('f_amount'))||0,payment_date:g('f_date'),month:g('f_month'),status:g('f_status'),ref:g('f_ref')||genRef(),note:g('f_note')};col='contributions';
+    } else if(curPage==='income'&&g('f_date')&&g('f_amount')&&g('f_source')){
+      rec={date:g('f_date'),source:g('f_source'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='income';
+    } else if(curPage==='expense'&&g('f_date')&&g('f_amount')&&g('f_desc')){
+      rec={date:g('f_date'),desc:g('f_desc'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='expenses';
+    } else if(curPage==='product'&&g('f_name')&&g('f_start')&&g('f_due')){
+      rec={name:g('f_name'),category:g('f_cat'),start:g('f_start'),due:g('f_due'),target:parseFloat(g('f_target'))||0,status:g('f_status')};col='products';
+    }
+    if(rec&&col){
+      if(editMode)await fbUpd(col,editId,rec);
+      else await fbAdd(col,rec);
+      window.closeModal();
+    } else alert('Please fill in all required (*) fields.');
+  }catch(e){alert('Error saving: '+e.message);}
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save';
+}
+
+// ===== SETTINGS =====
+function loadSettingsForm(){document.getElementById('set_name').value=cfg.appName;document.getElementById('set_season').value=cfg.season;}
+window.saveSettings=async function(){cfg.appName=document.getElementById('set_name').value||'Joelle-Tan Ltd';cfg.season=document.getElementById('set_season').value||'Season 2025';await saveCfg();applyBranding();alert('Saved!');}
+window.changePass=async function(){
+  const old=document.getElementById('set_oldpass').value;const nw=document.getElementById('set_newpass').value;const al=document.getElementById('passAlert');
+  if(old!==cfg.adminPass){showAl(al,'Current password incorrect','d');return;}
+  if(!nw||nw.length<4){showAl(al,'New password must be 4+ characters','d');return;}
+  cfg.adminPass=nw;await saveCfg();document.getElementById('set_oldpass').value='';document.getElementById('set_newpass').value='';showAl(al,'Password changed!','s');
+}
+
+function showAl(el,msg,type){el.style.display='block';el.className='alert al-'+type;el.textContent=msg;setTimeout(()=>el.style.display='none',3500);}
+
+init();
+</script>
+</body>
+</html>
