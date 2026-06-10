@@ -1,0 +1,28 @@
+{
+  "name": "Joelle-Tan Ltd Investment Platform",
+  "short_name": "Joelle-Tan",
+  "description": "Farm Investment Management Platform by Joelle-Tan Ltd",
+  "start_url": "/Joelletanltd-farm/",
+  "scope": "/Joelletanltd-farm/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "categories": ["finance", "business"],
+  "icons": [
+    {
+      "src": "https://bigman-teks.github.io/Joelletanltd-farm/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://bigman-teks.github.io/Joelletanltd-farm/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
