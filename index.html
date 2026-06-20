@@ -288,16 +288,18 @@ select.fi option{background:var(--navy2);color:var(--text)}
 
       <!-- INCOME -->
       <div class="page" id="page-income">
+        <div class="sb"><select class="fi" id="iProdFilter" style="width:180px;max-width:100%" onchange="renderIncome()"><option value="">All Products</option></select></div>
         <div class="g3" id="incomeMetrics"></div>
         <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-up"></i> Income Records</span><div style="display:flex;gap:5px"><button class="btn btn-excel btn-sm" onclick="exportExcel('income')"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="btn btn-pdf btn-sm" onclick="exportPDF('income')"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div>
-        <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Source</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="incomeTable"></tbody></table></div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Product</th><th>Source</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="incomeTable"></tbody></table></div></div>
       </div>
 
       <!-- EXPENSES -->
       <div class="page" id="page-expenses">
+        <div class="sb"><select class="fi" id="eProdFilter" style="width:180px;max-width:100%" onchange="renderExpenses()"><option value="">All Products</option></select></div>
         <div class="g3" id="expenseMetrics"></div>
         <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-down"></i> Expense Records</span><div style="display:flex;gap:5px"><button class="btn btn-excel btn-sm" onclick="exportExcel('expense')"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="btn btn-pdf btn-sm" onclick="exportPDF('expense')"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div>
-        <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="expenseTable"></tbody></table></div></div>
+        <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Product</th><th>Description</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="expenseTable"></tbody></table></div></div>
       </div>
 
       <!-- INVESTORS -->
@@ -307,6 +309,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
           <div class="ch"><span class="ct"><i class="ti ti-users"></i> Investor Profiles</span>
             <div style="display:flex;gap:5px;flex-wrap:wrap">
               <input class="fi" id="invSearch" placeholder="Search..." style="width:150px" oninput="renderInvestors()">
+              <select class="fi" id="invProdFilter" style="width:150px" onchange="renderInvestors()"><option value="">All Products</option></select>
               <button class="btn btn-excel btn-sm" onclick="exportExcel('investors')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
               <button class="btn btn-pdf btn-sm" onclick="exportPDF('investors')"><i class="ti ti-file-type-pdf"></i> PDF</button>
             </div>
@@ -338,6 +341,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
 
       <!-- ROI -->
       <div class="page" id="page-roi">
+        <div class="sb"><select class="fi" id="roiProdFilter" style="width:180px;max-width:100%" onchange="renderROI()"><option value="">All Products</option></select></div>
         <div class="g3" id="roiMetrics"></div>
         <div class="g2">
           <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-line"></i> ROI per Investor</span></div><div class="cw"><canvas id="roiChart"></canvas></div></div>
@@ -460,23 +464,49 @@ function renderActivePage(){
   const p=activePage;
   if(p==='dashboard')renderDashboard();
   else if(p==='products')renderProducts();
-  else if(p==='income')renderIncome();
-  else if(p==='expenses')renderExpenses();
-  else if(p==='investors'){renderInvestors();populateProdFilter();}
+  else if(p==='income'){populateProdFilterSel('iProdFilter');renderIncome();}
+  else if(p==='expenses'){populateProdFilterSel('eProdFilter');renderExpenses();}
+  else if(p==='investors'){populateProdFilterSel('invProdFilter');renderInvestors();populateProdFilter();}
   else if(p==='contributions'){renderContributions();populateProdFilter();}
-  else if(p==='roi')renderROI();
+  else if(p==='roi'){populateProdFilterSel('roiProdFilter');renderROI();}
   else if(p==='settings'){loadSettingsForm();renderPendingRegs();}
+}
+function populateProdFilterSel(selId){
+  const sel=document.getElementById(selId);if(!sel)return;
+  const cur=sel.value;sel.innerHTML='<option value="">All Products</option>';
+  get('products').forEach(p=>{sel.innerHTML+=`<option value="${p._id}" ${cur===p._id?'selected':''}>${p.name}</option>`});
 }
 
 // ── CALCS ────────────────────────────────────────────────
 const fN=n=>'₦'+Math.round(n||0).toLocaleString('en-NG');
-const tInc=()=>get('income').reduce((s,r)=>s+Number(r.amount||0),0);
-const tExp=()=>get('expenses').reduce((s,r)=>s+Number(r.amount||0),0);
-const tContrib=()=>get('contributions').filter(c=>c.status==='Paid').reduce((s,c)=>s+Number(c.amount||0),0);
-const netFund=()=>tContrib()-tExp();
+// Farm-wide totals (admin overview)
+const tInc=(pid)=>get('income').filter(r=>!pid||r.product_id===pid).reduce((s,r)=>s+Number(r.amount||0),0);
+const tExp=(pid)=>get('expenses').filter(r=>!pid||r.product_id===pid).reduce((s,r)=>s+Number(r.amount||0),0);
+const tContrib=(pid)=>get('contributions').filter(c=>c.status==='Paid'&&(!pid||c.product_id===pid)).reduce((s,c)=>s+Number(c.amount||0),0);
+const netFund=(pid)=>tContrib(pid)-tExp(pid);
 const invPaid=(id,prodId)=>get('contributions').filter(c=>c.investor_id===id&&c.status==='Paid'&&(!prodId||c.product_id===prodId)).reduce((s,c)=>s+Number(c.amount||0),0);
 const tInvAmt=()=>get('investors').reduce((s,i)=>s+invPaid(i._id),0);
-const invShare=id=>{const tc=tContrib();if(!tc)return 0;return(invPaid(id)/tc)*(tInc()-tExp())};
+// Investor's income share is computed PER PRODUCT: their share of that product's
+// net income (product income - product expenses), proportional to their
+// contribution within that specific product's total contributions.
+const invShareForProduct=(invId,pid)=>{
+  const prodTotalContrib=tContrib(pid);
+  if(!prodTotalContrib)return 0;
+  const myContrib=invPaid(invId,pid);
+  const prodNetIncome=tInc(pid)-tExp(pid);
+  return(myContrib/prodTotalContrib)*prodNetIncome;
+};
+// Total income share across all of an investor's subscribed products
+const invShare=id=>{
+  const inv=store.investors.get(id);
+  const subIds=inv?.subscribed_products||[];
+  if(subIds.length){
+    return subIds.reduce((s,pid)=>s+invShareForProduct(id,pid),0);
+  }
+  // Fallback: investor not linked to any product — use farm-wide share
+  const tc=tContrib();if(!tc)return 0;
+  return(invPaid(id)/tc)*(tInc()-tExp());
+};
 const invROIPct=id=>{const p=invPaid(id);if(!p)return 0;return(invShare(id)/p)*100};
 const invTxCount=id=>get('contributions').filter(c=>c.investor_id===id).length;
 // Product-level calcs
@@ -662,7 +692,8 @@ function renderInvestorDashboard(){
       ${subProds.length?subProds.map(p=>{
         const prodTxs=allTxs.filter(c=>c.product_id===p._id);
         const prodPaid=prodTxs.filter(c=>c.status==='Paid').reduce((s,c)=>s+Number(c.amount||0),0);
-        const expectedRet=prodPaid*(1+Number(p.roi_pct||0)/100);
+        const prodShare=invShareForProduct(currentInvestorId,p._id);
+        const expectedRet=prodPaid+prodShare;
         const progress=p.start_date&&p.end_date?pct(p.start_date,p.end_date):0;
         return `<div class="sub-prod-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
@@ -674,8 +705,8 @@ function renderInvestorDashboard(){
           </div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:11px">
             <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">My Investment</div><div style="font-size:12px;font-weight:700;color:var(--gold)">${fN(prodPaid)}</div></div>
-            <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">ROI Rate</div><div style="font-size:12px;font-weight:700;color:#2ecc71">${p.roi_pct||0}%</div></div>
-            <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">Expected Return</div><div style="font-size:12px;font-weight:700;color:#9b59b6">${fN(expectedRet)}</div></div>
+            <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">Income Share</div><div style="font-size:12px;font-weight:700;color:#2ecc71">${fN(prodShare)}</div></div>
+            <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">Total Return</div><div style="font-size:12px;font-weight:700;color:#9b59b6">${fN(expectedRet)}</div></div>
             <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">Maturity Date</div><div style="font-size:12px;font-weight:700;color:var(--text)">${p.end_date||'—'}</div></div>
           </div>
           ${p.start_date&&p.end_date?`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px"><span>Progress</span><span>${progress}%</span></div><div class="pb"><div class="pf" style="width:${progress}%"></div></div></div>`:''}
@@ -698,10 +729,11 @@ function renderInvestorDashboard(){
     </div>`;
 }
 
-// ── INVESTMENT PRODUCTS (admin) ───────────────────────────
+// ── INVESTMENT PRODUCTS (admin sees all, investor sees only subscribed) ──
 function renderProducts(){
+  const isAdmin=currentUser?.role==='admin';
   const q=(document.getElementById('prodSearch')?.value||'').toLowerCase();
-  let list=get('products');
+  let list=isAdmin?get('products'):(()=>{const inv=store.investors.get(currentInvestorId);const subIds=inv?.subscribed_products||[];return get('products').filter(p=>subIds.includes(p._id));})();
   if(q)list=list.filter(p=>(p.name||'').toLowerCase().includes(q));
   document.getElementById('prodGrid').innerHTML=list.length?list.map(p=>`
     <div class="prod-card">
@@ -712,42 +744,42 @@ function renderProducts(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
         <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">ROI Rate</div><div style="font-size:13px;font-weight:700;color:#2ecc71">${p.roi_pct||0}%</div></div>
         <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">Duration</div><div style="font-size:12px;font-weight:600;color:var(--text)">${p.duration||'—'}</div></div>
-        <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">Total Invested</div><div style="font-size:12px;font-weight:700;color:var(--gold)">${fN(prodTotalInv(p._id))}</div></div>
-        <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">Investors</div><div style="font-size:12px;font-weight:700;color:var(--text)">${prodInvestorCount(p._id)}</div></div>
+        <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">${isAdmin?'Total Invested':'My Investment'}</div><div style="font-size:12px;font-weight:700;color:var(--gold)">${fN(isAdmin?prodTotalInv(p._id):invPaid(currentInvestorId,p._id))}</div></div>
+        <div style="background:rgba(255,255,255,.04);border-radius:5px;padding:7px"><div class="info-label">${isAdmin?'Investors':'My Income Share'}</div><div style="font-size:12px;font-weight:700;color:var(--text)">${isAdmin?prodInvestorCount(p._id):fN(invShareForProduct(currentInvestorId,p._id))}</div></div>
       </div>
       ${p.start_date&&p.end_date?`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px"><span>Progress</span><span>${pct(p.start_date,p.end_date)}%</span></div><div class="pb"><div class="pf" style="width:${pct(p.start_date,p.end_date)}%"></div></div></div>`:''}
       <div style="font-size:9px;color:var(--text3);margin-bottom:9px">Start: ${p.start_date||'—'} · End: ${p.end_date||'—'}</div>
       <div class="atd">
         <button class="btn btn-info btn-xs" onclick="window.showProductDetail('${p._id}')"><i class="ti ti-eye"></i> View</button>
-        <button class="btn btn-outline btn-xs" onclick="window.editRec('product','${p._id}')"><i class="ti ti-edit"></i> Edit</button>
-        <button class="btn btn-danger btn-xs" onclick="window.delRec('product','${p._id}')"><i class="ti ti-trash"></i></button>
+        ${isAdmin?`<button class="btn btn-outline btn-xs" onclick="window.editRec('product','${p._id}')"><i class="ti ti-edit"></i> Edit</button><button class="btn btn-danger btn-xs" onclick="window.delRec('product','${p._id}')"><i class="ti ti-trash"></i></button>`:''}
       </div>
-    </div>`).join(''):`<div style="grid-column:1/-1">${empty('No investment products yet. Click Add to create one.')}</div>`;
+    </div>`).join(''):`<div style="grid-column:1/-1">${empty(isAdmin?'No investment products yet. Click Add to create one.':'No products subscribed yet. Contact admin to be assigned.')}</div>`;
 }
 
 window.showProductDetail=function(pid){
   const p=store.products.get(pid);if(!p)return;
-  const txs=get('contributions').filter(c=>c.product_id===pid).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+  const isAdmin=currentUser?.role==='admin';
+  const txs=isAdmin?get('contributions').filter(c=>c.product_id===pid).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date)):get('contributions').filter(c=>c.product_id===pid&&c.investor_id===currentInvestorId).sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
   const subInvs=get('investors').filter(i=>(i.subscribed_products||[]).includes(pid));
-  const totInv=prodTotalInv(pid);
+  const totInv=isAdmin?prodTotalInv(pid):invPaid(currentInvestorId,pid);
   document.getElementById('productModalTitle').textContent=p.name;
   document.getElementById('productModalBody').innerHTML=`
     <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
-      <div class="mc" style="flex:1;min-width:90px"><div class="ml">Total Invested</div><div class="mv">${fN(totInv)}</div></div>
+      <div class="mc" style="flex:1;min-width:90px"><div class="ml">${isAdmin?'Total Invested':'My Investment'}</div><div class="mv">${fN(totInv)}</div></div>
       <div class="mc" style="flex:1;min-width:90px"><div class="ml">ROI Rate</div><div class="mv">${p.roi_pct||0}%</div></div>
-      <div class="mc" style="flex:1;min-width:90px"><div class="ml">Expected Payout</div><div class="mv">${fN(prodExpectedReturn(pid))}</div></div>
-      <div class="mc" style="flex:1;min-width:90px"><div class="ml">Investors</div><div class="mv">${subInvs.length}</div></div>
+      <div class="mc" style="flex:1;min-width:90px"><div class="ml">${isAdmin?'Expected Payout':'My Income Share'}</div><div class="mv">${fN(isAdmin?prodExpectedReturn(pid):invShareForProduct(currentInvestorId,pid))}</div></div>
+      ${isAdmin?`<div class="mc" style="flex:1;min-width:90px"><div class="ml">Investors</div><div class="mv">${subInvs.length}</div></div>`:''}
     </div>
     <div style="font-size:10px;color:var(--text3);margin-bottom:10px">${p.description||'—'} · ${p.start_date||'—'} → ${p.end_date||'—'} · ${p.duration||'—'}</div>
-    <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">SUBSCRIBED INVESTORS (${subInvs.length})</div>
-    ${subInvs.length?`<div style="margin-bottom:12px">${subInvs.map(inv=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px"><span>${inv.full_name}</span><span style="color:var(--gold)">${fN(invPaid(inv._id,pid))}</span></div>`).join('')}</div>`:empty('No investors assigned')}
-    <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">TRANSACTION HISTORY (${txs.length})</div>
-    <div class="tbl-wrap"><table style="min-width:400px"><thead><tr><th>Investor</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
-    <tbody>${txs.length?txs.map(c=>{const inv=store.investors.get(c.investor_id);return `<tr><td>${inv?.full_name||'?'}</td><td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td><td>${c.payment_date}</td><td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td></tr>`}).join(''):`<tr><td colspan="4">${empty('No transactions')}</td></tr>`}</tbody></table></div>
-    <div style="margin-top:12px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+    ${isAdmin?`<div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">SUBSCRIBED INVESTORS (${subInvs.length})</div>
+    ${subInvs.length?`<div style="margin-bottom:12px">${subInvs.map(inv=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px"><span>${inv.full_name}</span><span style="color:var(--gold)">${fN(invPaid(inv._id,pid))}</span></div>`).join('')}</div>`:empty('No investors assigned')}`:''}
+    <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">${isAdmin?'TRANSACTION HISTORY':'MY TRANSACTIONS'} (${txs.length})</div>
+    <div class="tbl-wrap"><table style="min-width:${isAdmin?'400':'320'}px"><thead><tr>${isAdmin?'<th>Investor</th>':''}<th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+    <tbody>${txs.length?txs.map(c=>{const inv=store.investors.get(c.investor_id);return `<tr>${isAdmin?`<td>${inv?.full_name||'?'}</td>`:''}<td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td><td>${c.payment_date}</td><td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td></tr>`}).join(''):`<tr><td colspan="${isAdmin?4:3}">${empty('No transactions')}</td></tr>`}</tbody></table></div>
+    ${isAdmin?`<div style="margin-top:12px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn btn-excel btn-sm" onclick="exportProductExcel('${pid}')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
       <button class="btn btn-pdf btn-sm" onclick="exportProductPDF('${pid}')"><i class="ti ti-file-type-pdf"></i> Export PDF</button>
-    </div>`;
+    </div>`:''}`;
   document.getElementById('productModal').classList.add('open');
 };
 window.closeProductModal=function(){document.getElementById('productModal').classList.remove('open')};
@@ -755,27 +787,36 @@ document.getElementById('productModal').addEventListener('click',function(e){if(
 
 // ── INCOME ────────────────────────────────────────────────
 function renderIncome(){
-  const tot=tInc();const cats=[...new Set(get('income').map(r=>r.category))];
-  document.getElementById('incomeMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Total Income</div><div class="mv">${fN(tot)}</div><div class="ms">${get('income').length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-receipt"></i></div><div class="ml">Avg Transaction</div><div class="mv">${get('income').length?fN(tot/get('income').length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-category"></i></div><div class="ml">Categories</div><div class="mv">${cats.length}</div><div class="ms">${cats.slice(0,2).join(', ')||'None'}</div></div>`;
-  document.getElementById('incomeTable').innerHTML=get('income').length?[...get('income')].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td style="font-weight:500;color:var(--text)">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('income','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('income','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join(''):`<tr><td colspan="7">${empty('No income records')}</td></tr>`;
+  const pid=document.getElementById('iProdFilter')?.value||'';
+  const filtered=pid?get('income').filter(r=>r.product_id===pid):get('income');
+  const tot=filtered.reduce((s,r)=>s+Number(r.amount||0),0);
+  const cats=[...new Set(filtered.map(r=>r.category))];
+  document.getElementById('incomeMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">${pid?'Product Income':'Total Income'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-receipt"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-category"></i></div><div class="ml">Categories</div><div class="mv">${cats.length}</div><div class="ms">${cats.slice(0,2).join(', ')||'None'}</div></div>`;
+  document.getElementById('incomeTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td style="font-weight:500;color:var(--text)">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('income','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('income','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No income records'+(pid?' for this product':''))}</td></tr>`;
 }
 
 // ── EXPENSES ──────────────────────────────────────────────
 function renderExpenses(){
-  const tot=tExp();
-  document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">Total Expenses</div><div class="mv">${fN(tot)}</div><div class="ms">${get('expenses').length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${get('expenses').length?fN(tot/get('expenses').length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-wallet"></i></div><div class="ml">Net Fund</div><div class="mv">${fN(netFund())}</div><div class="ms">Contributions − Expenses</div></div>`;
-  document.getElementById('expenseTable').innerHTML=get('expenses').length?[...get('expenses')].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td style="font-weight:500;color:var(--text)">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`).join(''):`<tr><td colspan="7">${empty('No expenses')}</td></tr>`;
+  const pid=document.getElementById('eProdFilter')?.value||'';
+  const filtered=pid?get('expenses').filter(r=>r.product_id===pid):get('expenses');
+  const tot=filtered.reduce((s,r)=>s+Number(r.amount||0),0);
+  document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">${pid?'Product Expenses':'Total Expenses'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-wallet"></i></div><div class="ml">Net Fund</div><div class="mv">${fN(netFund(pid||undefined))}</div><div class="ms">Contributions − Expenses</div></div>`;
+  document.getElementById('expenseTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td style="font-weight:500;color:var(--text)">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No expenses'+(pid?' for this product':''))}</td></tr>`;
 }
 
 // ── INVESTORS ─────────────────────────────────────────────
 window.renderInvestors=function(){
   const q=(document.getElementById('invSearch')?.value||'').toLowerCase();
+  const pid=document.getElementById('invProdFilter')?.value||'';
   let list=[...get('investors')].sort((a,b)=>invPaid(b._id)-invPaid(a._id));
   if(q)list=list.filter(i=>(i.full_name||'').toLowerCase().includes(q)||(i.email||'').toLowerCase().includes(q)||(i.phone||'').toLowerCase().includes(q));
-  document.getElementById('investorMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-users"></i></div><div class="ml">Active</div><div class="mv">${get('investors').filter(i=>i.status==='Active').length}</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Contributions</div><div class="mv">${fN(tContrib())}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-receipt"></i></div><div class="ml">Transactions</div><div class="mv">${get('contributions').length}</div></div><div class="mc"><div class="mi" style="background:#9b59b622;color:#9b59b6"><i class="ti ti-clock"></i></div><div class="ml">Pending</div><div class="mv">${get('contributions').filter(c=>c.status==='Pending'||c.status==='Overdue').length}</div></div>`;
+  if(pid)list=list.filter(i=>(i.subscribed_products||[]).includes(pid));
+  const baseList=pid?get('investors').filter(i=>(i.subscribed_products||[]).includes(pid)):get('investors');
+  document.getElementById('investorMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-users"></i></div><div class="ml">${pid?'Subscribed':'Active'}</div><div class="mv">${pid?baseList.length:get('investors').filter(i=>i.status==='Active').length}</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">Contributions</div><div class="mv">${fN(tContrib(pid||undefined))}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-receipt"></i></div><div class="ml">Transactions</div><div class="mv">${pid?get('contributions').filter(c=>c.product_id===pid).length:get('contributions').length}</div></div><div class="mc"><div class="mi" style="background:#9b59b622;color:#9b59b6"><i class="ti ti-clock"></i></div><div class="ml">Pending</div><div class="mv">${get('contributions').filter(c=>(c.status==='Pending'||c.status==='Overdue')&&(!pid||c.product_id===pid)).length}</div></div>`;
   document.getElementById('investorsTable').innerHTML=list.length?list.map((inv,i)=>{
-    const subProds=(inv.subscribed_products||[]).map(pid=>{const p=store.products.get(pid);return p?`<span class="tag">${p.name}</span>`:''}).join(' ');
-    return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="font-weight:500;color:var(--text)">${inv.full_name}<br><span style="font-size:9px;color:var(--text3)">@${inv.username||'—'}</span></td><td style="color:var(--text3)">${inv.email||'—'}</td><td style="color:var(--text3)">${inv.phone||'—'}</td><td>${subProds||'<span style="color:var(--text3)">None</span>'}</td><td style="color:var(--gold);font-weight:600">${fN(invPaid(inv._id))}</td><td style="color:#2ecc71">${invROIPct(inv._id).toFixed(1)}%</td><td><span class="st ${sc[inv.status]||'s-active'}">${inv.status||'Active'}</span></td><td><div class="atd"><button class="btn btn-info btn-xs" onclick="window.showProfile('${inv._id}')"><i class="ti ti-eye"></i></button><button class="btn btn-outline btn-xs" onclick="window.editRec('investor','${inv._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('investor','${inv._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`;
+    const subProds=(inv.subscribed_products||[]).map(p=>{const pr=store.products.get(p);return pr?`<span class="tag">${pr.name}</span>`:''}).join(' ');
+    const contributedAmt=pid?invPaid(inv._id,pid):invPaid(inv._id);
+    return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="font-weight:500;color:var(--text)">${inv.full_name}<br><span style="font-size:9px;color:var(--text3)">@${inv.username||'—'}</span></td><td style="color:var(--text3)">${inv.email||'—'}</td><td style="color:var(--text3)">${inv.phone||'—'}</td><td>${subProds||'<span style="color:var(--text3)">None</span>'}</td><td style="color:var(--gold);font-weight:600">${fN(contributedAmt)}</td><td style="color:#2ecc71">${invROIPct(inv._id).toFixed(1)}%</td><td><span class="st ${sc[inv.status]||'s-active'}">${inv.status||'Active'}</span></td><td><div class="atd"><button class="btn btn-info btn-xs" onclick="window.showProfile('${inv._id}')"><i class="ti ti-eye"></i></button><button class="btn btn-outline btn-xs" onclick="window.editRec('investor','${inv._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('investor','${inv._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`;
   }).join(''):`<tr><td colspan="9">${empty('No investors found')}</td></tr>`;
 };
 
@@ -805,13 +846,22 @@ window.renderContributions=function(){
 
 // ── ROI ───────────────────────────────────────────────────
 function renderROI(){
-  const sorted=[...get('investors')].filter(i=>i.status==='Active').sort((a,b)=>invPaid(b._id)-invPaid(a._id));
-  document.getElementById('roiMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-cash"></i></div><div class="ml">Contributions</div><div class="mv">${fN(tContrib())}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">Expenses</div><div class="mv">${fN(tExp())}</div><div class="ms">Deducted</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-trending-up"></i></div><div class="ml">Net Shared</div><div class="mv">${fN(tInc()-tExp())}</div></div>`;
+  const pid=document.getElementById('roiProdFilter')?.value||'';
+  let sorted=[...get('investors')].filter(i=>i.status==='Active');
+  if(pid)sorted=sorted.filter(i=>(i.subscribed_products||[]).includes(pid));
+  sorted.sort((a,b)=>invPaid(b._id,pid||undefined)-invPaid(a._id,pid||undefined));
+  document.getElementById('roiMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-cash"></i></div><div class="ml">${pid?'Product Contributions':'Contributions'}</div><div class="mv">${fN(tContrib(pid||undefined))}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">${pid?'Product Expenses':'Expenses'}</div><div class="mv">${fN(tExp(pid||undefined))}</div><div class="ms">Deducted</div></div><div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-trending-up"></i></div><div class="ml">Net Income</div><div class="mv">${fN(tInc(pid||undefined)-tExp(pid||undefined))}</div></div>`;
   if(roiCI){roiCI.destroy();roiCI=null;}
-  if(sorted.length)roiCI=new Chart(document.getElementById('roiChart'),{type:'bar',data:{labels:sorted.map(i=>i.full_name.split(' ')[0]),datasets:[{label:'ROI %',data:sorted.map(i=>invROIPct(i._id)),backgroundColor:COLORS,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6a7d95',callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#a8b4c8',font:{size:10}},grid:{display:false}}}}});
-  document.getElementById('leaderboard').innerHTML=sorted.length?sorted.map((inv,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:21px;height:21px;border-radius:50%;background:${COLORS[i]||'#888'}22;color:${COLORS[i]||'#888'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inv.full_name}</div><div style="font-size:9px;color:var(--text3)">${fN(invPaid(inv._id))}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:11px;color:#2ecc71;font-weight:600">${fN(invShare(inv._id))}</div><div style="font-size:9px;color:var(--text3)">${invROIPct(inv._id).toFixed(1)}%</div></div></div>`).join(''):empty('No investors');
-  const tT=tContrib()||1;
-  document.getElementById('roiTable').innerHTML=sorted.length?sorted.map((inv,i)=>{const tot=invPaid(inv._id),share=invShare(inv._id);const subs=(inv.subscribed_products||[]).map(pid=>store.products.get(pid)?.name).filter(Boolean).join(', ');return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="font-weight:500;color:var(--text)">${inv.full_name}</td><td style="color:var(--text3);font-size:10px">${subs||'—'}</td><td style="color:var(--gold)">${fN(tot)}</td><td style="color:#3a7bd5">${(tot/tT*100).toFixed(1)}%</td><td style="color:#2ecc71">${fN(share)}</td><td style="color:var(--gold2);font-weight:600">${fN(tot+share)}</td><td style="color:var(--gold);font-weight:700">${invROIPct(inv._id).toFixed(1)}%</td></tr>`}).join(''):`<tr><td colspan="8">${empty('No data')}</td></tr>`;
+  if(sorted.length)roiCI=new Chart(document.getElementById('roiChart'),{type:'bar',data:{labels:sorted.map(i=>i.full_name.split(' ')[0]),datasets:[{label:'ROI %',data:sorted.map(i=>pid?(invPaid(i._id,pid)?(invShareForProduct(i._id,pid)/invPaid(i._id,pid)*100):0):invROIPct(i._id)),backgroundColor:COLORS,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6a7d95',callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#a8b4c8',font:{size:10}},grid:{display:false}}}}});
+  document.getElementById('leaderboard').innerHTML=sorted.length?sorted.map((inv,i)=>{const amt=pid?invPaid(inv._id,pid):invPaid(inv._id);const sh=pid?invShareForProduct(inv._id,pid):invShare(inv._id);const roi=amt?(sh/amt*100):0;return `<div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="width:21px;height:21px;border-radius:50%;background:${COLORS[i]||'#888'}22;color:${COLORS[i]||'#888'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inv.full_name}</div><div style="font-size:9px;color:var(--text3)">${fN(amt)}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:11px;color:#2ecc71;font-weight:600">${fN(sh)}</div><div style="font-size:9px;color:var(--text3)">${roi.toFixed(1)}%</div></div></div>`}).join(''):empty('No investors');
+  const tT=tContrib(pid||undefined)||1;
+  document.getElementById('roiTable').innerHTML=sorted.length?sorted.map((inv,i)=>{
+    const tot=pid?invPaid(inv._id,pid):invPaid(inv._id);
+    const share=pid?invShareForProduct(inv._id,pid):invShare(inv._id);
+    const roi=tot?(share/tot*100):0;
+    const subs=pid?(store.products.get(pid)?.name||''):(inv.subscribed_products||[]).map(p=>store.products.get(p)?.name).filter(Boolean).join(', ');
+    return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="font-weight:500;color:var(--text)">${inv.full_name}</td><td style="color:var(--text3);font-size:10px">${subs||'—'}</td><td style="color:var(--gold)">${fN(tot)}</td><td style="color:#3a7bd5">${(tot/tT*100).toFixed(1)}%</td><td style="color:#2ecc71">${fN(share)}</td><td style="color:var(--gold2);font-weight:600">${fN(tot+share)}</td><td style="color:var(--gold);font-weight:700">${roi.toFixed(1)}%</td></tr>`;
+  }).join(''):`<tr><td colspan="8">${empty('No data')}</td></tr>`;
 }
 
 // ── PENDING REGS ──────────────────────────────────────────
@@ -957,9 +1007,10 @@ function renderForm(rec,preselInvId){
   else if(curPage==='contribution'){const invOpts=get('investors').filter(i=>i.status==='Active').map(i=>`<option value="${i._id}" ${(preselInvId===i._id||v('investor_id')===i._id)?'selected':''}>${i.full_name}</option>`).join('');h=`<div class="fg"><label class="fl">Investor *</label><select class="fi" id="f_inv_id" onchange="window.updateContribProds()">${invOpts||'<option>No active investors</option>'}</select></div><div class="fg"><label class="fl">Investment Product *</label><select class="fi" id="f_prod_id"><option value="">— Select product —</option>${prodOpts}</select></div><div class="fr"><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div><div class="fg"><label class="fl">Payment Date *</label><input class="fi" type="date" id="f_date" value="${v('payment_date')}"></div></div><div class="fr"><div class="fg"><label class="fl">Month *</label><select class="fi" id="f_month">${MF.map(m=>`<option ${v('month')===m?'selected':''}>${m}</option>`).join('')}</select></div><div class="fg"><label class="fl">Status</label><select class="fi" id="f_status"><option ${v('status')==='Paid'?'selected':''}>Paid</option><option ${v('status')==='Pending'?'selected':''}>Pending</option><option ${v('status')==='Partial'?'selected':''}>Partial</option><option ${v('status')==='Overdue'?'selected':''}>Overdue</option></select></div></div><div class="fr"><div class="fg"><label class="fl">Ref</label><input class="fi" id="f_ref" value="${v('ref')||genRef()}"></div><div class="fg"><label class="fl">Note</label><input class="fi" id="f_note" value="${v('note')}"></div></div>`;
     if(v('product_id'))setTimeout(()=>{const s=document.getElementById('f_prod_id');if(s)s.value=v('product_id')},50);
   }
-  else if(curPage==='income')h=`<div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Source *</label><input class="fi" id="f_source" value="${v('source')}" placeholder="e.g. Maize Sales"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Crop Sales'?'selected':''}>Crop Sales</option><option ${v('category')==='Export'?'selected':''}>Export</option><option ${v('category')==='Grant'?'selected':''}>Grant</option><option ${v('category')==='Other'?'selected':''}>Other</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
-  else if(curPage==='expense')h=`<div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Description *</label><input class="fi" id="f_desc" value="${v('desc')}" placeholder="e.g. Fertilizer"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Farm Input'?'selected':''}>Farm Input</option><option ${v('category')==='Labour'?'selected':''}>Labour</option><option ${v('category')==='Infrastructure'?'selected':''}>Infrastructure</option><option ${v('category')==='Logistics'?'selected':''}>Logistics</option><option ${v('category')==='Maintenance'?'selected':''}>Maintenance</option><option ${v('category')==='Operations'?'selected':''}>Operations</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
+  else if(curPage==='income')h=`<div class="fg"><label class="fl">Product *</label><select class="fi" id="f_prod_id"><option value="">— Select product —</option>${prodOpts}</select></div><div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Source *</label><input class="fi" id="f_source" value="${v('source')}" placeholder="e.g. Maize Sales"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Crop Sales'?'selected':''}>Crop Sales</option><option ${v('category')==='Export'?'selected':''}>Export</option><option ${v('category')==='Grant'?'selected':''}>Grant</option><option ${v('category')==='Other'?'selected':''}>Other</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
+  else if(curPage==='expense')h=`<div class="fg"><label class="fl">Product *</label><select class="fi" id="f_prod_id"><option value="">— Select product —</option>${prodOpts}</select></div><div class="fr"><div class="fg"><label class="fl">Date *</label><input class="fi" type="date" id="f_date" value="${v('date')}"></div><div class="fg"><label class="fl">Amount (₦) *</label><input class="fi" type="number" id="f_amount" value="${v('amount')}"></div></div><div class="fg"><label class="fl">Description *</label><input class="fi" id="f_desc" value="${v('desc')}" placeholder="e.g. Fertilizer"></div><div class="fg"><label class="fl">Category</label><select class="fi" id="f_cat"><option ${v('category')==='Farm Input'?'selected':''}>Farm Input</option><option ${v('category')==='Labour'?'selected':''}>Labour</option><option ${v('category')==='Infrastructure'?'selected':''}>Infrastructure</option><option ${v('category')==='Logistics'?'selected':''}>Logistics</option><option ${v('category')==='Maintenance'?'selected':''}>Maintenance</option><option ${v('category')==='Operations'?'selected':''}>Operations</option></select></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="f_notes" value="${v('notes')}"></div>`;
   document.getElementById('modalBody').innerHTML=h;
+  if((curPage==='income'||curPage==='expense')&&v('product_id'))setTimeout(()=>{const s=document.getElementById('f_prod_id');if(s)s.value=v('product_id')},50);
   if(curPage==='contribution'&&preselInvId)setTimeout(()=>window.updateContribProds(preselInvId),80);
 }
 
@@ -988,10 +1039,10 @@ window.saveModal=async function(){
       rec={full_name:g('f_name'),username:g('f_uname'),email:g('f_email'),phone:g('f_phone'),password:g('f_pass')||'inv123',status:g('f_status'),subscribed_products:subProds,notes:g('f_notes')};col='investors';
     }else if(curPage==='contribution'&&g('f_inv_id')&&g('f_amount')&&g('f_date')){
       rec={investor_id:g('f_inv_id'),product_id:g('f_prod_id')||null,amount:parseFloat(g('f_amount'))||0,payment_date:g('f_date'),month:g('f_month'),status:g('f_status'),ref:g('f_ref')||genRef(),note:g('f_note')};col='contributions';
-    }else if(curPage==='income'&&g('f_date')&&g('f_amount')&&g('f_source')){
-      rec={date:g('f_date'),source:g('f_source'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='income';
-    }else if(curPage==='expense'&&g('f_date')&&g('f_amount')&&g('f_desc')){
-      rec={date:g('f_date'),desc:g('f_desc'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='expenses';
+    }else if(curPage==='income'&&g('f_date')&&g('f_amount')&&g('f_source')&&g('f_prod_id')){
+      rec={date:g('f_date'),product_id:g('f_prod_id'),source:g('f_source'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='income';
+    }else if(curPage==='expense'&&g('f_date')&&g('f_amount')&&g('f_desc')&&g('f_prod_id')){
+      rec={date:g('f_date'),product_id:g('f_prod_id'),desc:g('f_desc'),category:g('f_cat'),amount:parseFloat(g('f_amount'))||0,notes:g('f_notes')};col='expenses';
     }
     if(rec&&col){if(editMode)await fbUpd(col,editId,rec);else await fbAdd(col,rec);window.closeModal();}
     else alert('Please fill all required (*) fields.');
