@@ -288,7 +288,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
 
       <!-- INCOME -->
       <div class="page" id="page-income">
-        <div class="sb"><select class="fi" id="iProdFilter" style="width:180px;max-width:100%" onchange="renderIncome()"><option value="">All Products</option></select></div>
+        <div class="sb"><select class="fi" id="iProdFilter" style="width:180px;max-width:100%" onchange="window.renderIncome()"><option value="">All Products</option></select></div>
         <div class="g3" id="incomeMetrics"></div>
         <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-up"></i> Income Records</span><div style="display:flex;gap:5px"><button class="btn btn-excel btn-sm" onclick="exportExcel('income')"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="btn btn-pdf btn-sm" onclick="exportPDF('income')"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div>
         <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Product</th><th>Source</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="incomeTable"></tbody></table></div></div>
@@ -296,7 +296,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
 
       <!-- EXPENSES -->
       <div class="page" id="page-expenses">
-        <div class="sb"><select class="fi" id="eProdFilter" style="width:180px;max-width:100%" onchange="renderExpenses()"><option value="">All Products</option></select></div>
+        <div class="sb"><select class="fi" id="eProdFilter" style="width:180px;max-width:100%" onchange="window.renderExpenses()"><option value="">All Products</option></select></div>
         <div class="g3" id="expenseMetrics"></div>
         <div class="card"><div class="ch"><span class="ct"><i class="ti ti-trending-down"></i> Expense Records</span><div style="display:flex;gap:5px"><button class="btn btn-excel btn-sm" onclick="exportExcel('expense')"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="btn btn-pdf btn-sm" onclick="exportPDF('expense')"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div>
         <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Product</th><th>Description</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="expenseTable"></tbody></table></div></div>
@@ -341,7 +341,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
 
       <!-- ROI -->
       <div class="page" id="page-roi">
-        <div class="sb"><select class="fi" id="roiProdFilter" style="width:180px;max-width:100%" onchange="renderROI()"><option value="">All Products</option></select></div>
+        <div class="sb"><select class="fi" id="roiProdFilter" style="width:180px;max-width:100%" onchange="window.renderROI()"><option value="">All Products</option></select></div>
         <div class="g3" id="roiMetrics"></div>
         <div class="g2">
           <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-line"></i> ROI per Investor</span></div><div class="cw"><canvas id="roiChart"></canvas></div></div>
@@ -464,17 +464,28 @@ function renderActivePage(){
   const p=activePage;
   if(p==='dashboard')renderDashboard();
   else if(p==='products')renderProducts();
-  else if(p==='income'){populateProdFilterSel('iProdFilter');renderIncome();}
-  else if(p==='expenses'){populateProdFilterSel('eProdFilter');renderExpenses();}
+  else if(p==='income'){populateProdFilterSel('iProdFilter');window.renderIncome();}
+  else if(p==='expenses'){populateProdFilterSel('eProdFilter');window.renderExpenses();}
   else if(p==='investors'){populateProdFilterSel('invProdFilter');renderInvestors();populateProdFilter();}
   else if(p==='contributions'){renderContributions();populateProdFilter();}
-  else if(p==='roi'){populateProdFilterSel('roiProdFilter');renderROI();}
+  else if(p==='roi'){populateProdFilterSel('roiProdFilter');window.renderROI();}
   else if(p==='settings'){loadSettingsForm();renderPendingRegs();}
 }
 function populateProdFilterSel(selId){
   const sel=document.getElementById(selId);if(!sel)return;
-  const cur=sel.value;sel.innerHTML='<option value="">All Products</option>';
-  get('products').forEach(p=>{sel.innerHTML+=`<option value="${p._id}" ${cur===p._id?'selected':''}>${p.name}</option>`});
+  const cur=sel.value;
+  const products=get('products');
+  // Build new options string
+  const newOptsHtml='<option value="">All Products</option>'+products.map(p=>`<option value="${p._id}">${p.name}</option>`).join('');
+  // Only touch the DOM if the options actually changed (prevents losing focus/selection unnecessarily)
+  if(sel.getAttribute('data-opts-hash')!==String(products.length)+products.map(p=>p._id).join(',')){
+    sel.innerHTML=newOptsHtml;
+    sel.setAttribute('data-opts-hash',String(products.length)+products.map(p=>p._id).join(','));
+  }
+  // Restore previous selection if it still exists among the options
+  if(cur && [...sel.options].some(o=>o.value===cur)){
+    sel.value=cur;
+  }
 }
 
 // ── CALCS ────────────────────────────────────────────────
@@ -786,23 +797,23 @@ window.closeProductModal=function(){document.getElementById('productModal').clas
 document.getElementById('productModal').addEventListener('click',function(e){if(e.target===this)window.closeProductModal()});
 
 // ── INCOME ────────────────────────────────────────────────
-function renderIncome(){
+window.renderIncome=function(){
   const pid=document.getElementById('iProdFilter')?.value||'';
   const filtered=pid?get('income').filter(r=>r.product_id===pid):get('income');
   const tot=filtered.reduce((s,r)=>s+Number(r.amount||0),0);
   const cats=[...new Set(filtered.map(r=>r.category))];
   document.getElementById('incomeMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#2ecc7122;color:#2ecc71"><i class="ti ti-cash"></i></div><div class="ml">${pid?'Product Income':'Total Income'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-receipt"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#3a7bd522;color:#3a7bd5"><i class="ti ti-category"></i></div><div class="ml">Categories</div><div class="mv">${cats.length}</div><div class="ms">${cats.slice(0,2).join(', ')||'None'}</div></div>`;
-  document.getElementById('incomeTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td style="font-weight:500;color:var(--text)">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('income','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('income','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No income records'+(pid?' for this product':''))}</td></tr>`;
-}
+  document.getElementById('incomeTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span class="st s-overdue" title="No product assigned - edit to fix">⚠ Unassigned</span>'}</td><td style="font-weight:500;color:var(--text)">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('income','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('income','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No income records'+(pid?' for this product':''))}</td></tr>`;
+};;
 
 // ── EXPENSES ──────────────────────────────────────────────
-function renderExpenses(){
+window.renderExpenses=function(){
   const pid=document.getElementById('eProdFilter')?.value||'';
   const filtered=pid?get('expenses').filter(r=>r.product_id===pid):get('expenses');
   const tot=filtered.reduce((s,r)=>s+Number(r.amount||0),0);
   document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">${pid?'Product Expenses':'Total Expenses'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-wallet"></i></div><div class="ml">Net Fund</div><div class="mv">${fN(netFund(pid||undefined))}</div><div class="ms">Contributions − Expenses</div></div>`;
-  document.getElementById('expenseTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td style="font-weight:500;color:var(--text)">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No expenses'+(pid?' for this product':''))}</td></tr>`;
-}
+  document.getElementById('expenseTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span class="st s-overdue" title="No product assigned - edit to fix">⚠ Unassigned</span>'}</td><td style="font-weight:500;color:var(--text)">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No expenses'+(pid?' for this product':''))}</td></tr>`;
+};;
 
 // ── INVESTORS ─────────────────────────────────────────────
 window.renderInvestors=function(){
@@ -823,8 +834,16 @@ window.renderInvestors=function(){
 // ── CONTRIBUTIONS ─────────────────────────────────────────
 function populateProdFilter(){
   const sel=document.getElementById('cProd');if(!sel)return;
-  const cur=sel.value;sel.innerHTML='<option value="">All Products</option>';
-  get('products').forEach(p=>{sel.innerHTML+=`<option value="${p._id}" ${cur===p._id?'selected':''}>${p.name}</option>`});
+  const cur=sel.value;
+  const products=get('products');
+  const hash=String(products.length)+products.map(p=>p._id).join(',');
+  if(sel.getAttribute('data-opts-hash')!==hash){
+    sel.innerHTML='<option value="">All Products</option>'+products.map(p=>`<option value="${p._id}">${p.name}</option>`).join('');
+    sel.setAttribute('data-opts-hash',hash);
+  }
+  if(cur && [...sel.options].some(o=>o.value===cur)){
+    sel.value=cur;
+  }
 }
 window.renderContributions=function(){
   const q=(document.getElementById('cSearch')?.value||'').toLowerCase();
@@ -845,7 +864,7 @@ window.renderContributions=function(){
 };
 
 // ── ROI ───────────────────────────────────────────────────
-function renderROI(){
+window.renderROI=function(){
   const pid=document.getElementById('roiProdFilter')?.value||'';
   let sorted=[...get('investors')].filter(i=>i.status==='Active');
   if(pid)sorted=sorted.filter(i=>(i.subscribed_products||[]).includes(pid));
@@ -862,7 +881,7 @@ function renderROI(){
     const subs=pid?(store.products.get(pid)?.name||''):(inv.subscribed_products||[]).map(p=>store.products.get(p)?.name).filter(Boolean).join(', ');
     return `<tr><td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</td><td style="font-weight:500;color:var(--text)">${inv.full_name}</td><td style="color:var(--text3);font-size:10px">${subs||'—'}</td><td style="color:var(--gold)">${fN(tot)}</td><td style="color:#3a7bd5">${(tot/tT*100).toFixed(1)}%</td><td style="color:#2ecc71">${fN(share)}</td><td style="color:var(--gold2);font-weight:600">${fN(tot+share)}</td><td style="color:var(--gold);font-weight:700">${roi.toFixed(1)}%</td></tr>`;
   }).join(''):`<tr><td colspan="8">${empty('No data')}</td></tr>`;
-}
+};
 
 // ── PENDING REGS ──────────────────────────────────────────
 function renderPendingRegs(){
