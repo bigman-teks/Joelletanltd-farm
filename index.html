@@ -706,6 +706,10 @@ function renderInvestorDashboard(){
         const prodShare=invShareForProduct(currentInvestorId,p._id);
         const expectedRet=prodPaid+prodShare;
         const progress=p.start_date&&p.end_date?pct(p.start_date,p.end_date):0;
+        const prodIncomeRecs=get('income').filter(r=>r.product_id===p._id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+        const prodExpenseRecs=get('expenses').filter(r=>r.product_id===p._id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+        const prodTotalIncome=prodIncomeRecs.reduce((s,r)=>s+Number(r.amount||0),0);
+        const prodTotalExpense=prodExpenseRecs.reduce((s,r)=>s+Number(r.amount||0),0);
         return `<div class="sub-prod-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
             <div>
@@ -721,6 +725,29 @@ function renderInvestorDashboard(){
             <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px"><div class="info-label">Maturity Date</div><div style="font-size:12px;font-weight:700;color:var(--text)">${p.end_date||'—'}</div></div>
           </div>
           ${p.start_date&&p.end_date?`<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px"><span>Progress</span><span>${progress}%</span></div><div class="pb"><div class="pf" style="width:${progress}%"></div></div></div>`:''}
+
+          <!-- PRODUCT EXPENSE BREAKDOWN -->
+          <div style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:10px;font-weight:600;color:var(--text3)">EXPENSE BREAKDOWN FOR THIS PRODUCT</div>
+              <div style="font-size:10px;color:#e74c3c;font-weight:700">${fN(prodTotalExpense)} total</div>
+            </div>
+            ${prodExpenseRecs.length?`<div class="tbl-wrap"><table style="min-width:380px"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody>${prodExpenseRecs.map(e=>`<tr><td>${e.date}</td><td style="color:var(--text)">${e.desc}</td><td><span class="st s-pending">${e.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(e.amount)}</td></tr>`).join('')}</tbody></table></div>`:empty('No expenses recorded for this product yet')}
+          </div>
+
+          <!-- PRODUCT INCOME BREAKDOWN -->
+          <div style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:10px;font-weight:600;color:var(--text3)">INCOME BREAKDOWN FOR THIS PRODUCT</div>
+              <div style="font-size:10px;color:#2ecc71;font-weight:700">${fN(prodTotalIncome)} total</div>
+            </div>
+            ${prodIncomeRecs.length?`<div class="tbl-wrap"><table style="min-width:380px"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th>Amount</th></tr></thead><tbody>${prodIncomeRecs.map(r=>`<tr><td>${r.date}</td><td style="color:var(--text)">${r.source}</td><td><span class="st s-active">${r.category}</span></td><td style="color:#2ecc71;font-weight:600">${fN(r.amount)}</td></tr>`).join('')}</tbody></table></div>`:empty('No income recorded for this product yet')}
+          </div>
+
+          <div style="margin-top:12px;background:rgba(58,123,213,.08);border:1px solid rgba(58,123,213,.18);border-radius:6px;padding:8px 10px;font-size:9px;color:#3a7bd5">
+            <i class="ti ti-info-circle"></i> Net Income = ${fN(prodTotalIncome)} − ${fN(prodTotalExpense)} = <strong>${fN(prodTotalIncome-prodTotalExpense)}</strong>. My share is proportional to my contribution within this product.
+          </div>
+
           <div style="margin-top:9px">
             <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:6px">PAYMENT HISTORY (${prodTxs.length} records)</div>
             ${prodTxs.length?`<div class="tbl-wrap"><table style="min-width:400px"><thead><tr><th>Ref</th><th>Amount</th><th>Date</th><th>Month</th><th>Status</th></tr></thead><tbody>${prodTxs.map(c=>`<tr><td><span class="tag">${c.ref||'—'}</span></td><td style="color:#2ecc71;font-weight:600">${fN(c.amount)}</td><td>${c.payment_date}</td><td style="color:var(--text3)">${c.month||'—'}</td><td><span class="st ${sc[c.status]||'s-pending'}">${c.status}</span></td></tr>`).join('')}</tbody></table></div>`:empty('No transactions for this product yet')}
@@ -937,19 +964,49 @@ window.printReceipt=function(id){
 window.exportExcel=function(type){
   const XLSX=window.XLSX;if(!XLSX){alert('XLSX library not loaded');return;}
   let data=[],cols=[],title=type;
-  if(type==='income'){data=get('income').sort((a,b)=>new Date(b.date)-new Date(a.date));cols=['date','source','category','amount','notes'];title='Income Records';}
-  else if(type==='expense'){data=get('expenses').sort((a,b)=>new Date(b.date)-new Date(a.date));cols=['date','desc','category','amount','notes'];title='Expense Records';}
-  else if(type==='investors'){data=get('investors');
-    const rows=data.map(i=>({Name:i.full_name,Username:i.username,Email:i.email||'',Phone:i.phone||'',Products:(i.subscribed_products||[]).map(pid=>store.products.get(pid)?.name).join(', '),Contributed:invPaid(i._id),ROI:invROIPct(i._id).toFixed(1)+'%',Status:i.status||'Active'}));
-    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Investors');XLSX.writeFile(wb,'Investors.xlsx');return;}
+  if(type==='income'){
+    const pid=document.getElementById('iProdFilter')?.value||'';
+    data=(pid?get('income').filter(r=>r.product_id===pid):get('income')).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const rows=data.map(r=>({Date:r.date,Product:store.products.get(r.product_id)?.name||'Unassigned',Source:r.source,Category:r.category,Amount:r.amount,Notes:r.notes||''}));
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Income');XLSX.writeFile(wb,(pid?store.products.get(pid)?.name+'_':'')+'Income.xlsx');return;
+  }
+  else if(type==='expense'){
+    const pid=document.getElementById('eProdFilter')?.value||'';
+    data=(pid?get('expenses').filter(r=>r.product_id===pid):get('expenses')).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const rows=data.map(r=>({Date:r.date,Product:store.products.get(r.product_id)?.name||'Unassigned',Description:r.desc,Category:r.category,Amount:r.amount,Notes:r.notes||''}));
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Expenses');XLSX.writeFile(wb,(pid?store.products.get(pid)?.name+'_':'')+'Expenses.xlsx');return;
+  }
+  else if(type==='investors'){
+    const pid=document.getElementById('invProdFilter')?.value||'';
+    const q=(document.getElementById('invSearch')?.value||'').toLowerCase();
+    let list=pid?get('investors').filter(i=>(i.subscribed_products||[]).includes(pid)):get('investors');
+    if(q)list=list.filter(i=>(i.full_name||'').toLowerCase().includes(q)||(i.email||'').toLowerCase().includes(q)||(i.phone||'').toLowerCase().includes(q));
+    const rows=list.map(i=>({Name:i.full_name,Username:i.username,Email:i.email||'',Phone:i.phone||'',Products:(i.subscribed_products||[]).map(p=>store.products.get(p)?.name).join(', '),Contributed:pid?invPaid(i._id,pid):invPaid(i._id),ROI:invROIPct(i._id).toFixed(1)+'%',Status:i.status||'Active'}));
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Investors');XLSX.writeFile(wb,(pid?store.products.get(pid)?.name+'_':'')+'Investors.xlsx');return;
+  }
   else if(type==='contributions'){
-    const rows=get('contributions').sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date)).map(c=>{const inv=store.investors.get(c.investor_id);const prod=store.products.get(c.product_id);return{Ref:c.ref||'',Investor:inv?.full_name||'',Product:prod?.name||'',Amount:c.amount,Date:c.payment_date,Month:c.month||'',Status:c.status,Note:c.note||''};});
-    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contributions');XLSX.writeFile(wb,'Contributions.xlsx');return;}
+    const q=(document.getElementById('cSearch')?.value||'').toLowerCase();
+    const mon=document.getElementById('cMonth')?.value||'';
+    const yr=document.getElementById('cYear')?.value||'';
+    const st=document.getElementById('cStatus')?.value||'';
+    const pid=document.getElementById('cProd')?.value||'';
+    let list=[...get('contributions')].sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+    if(q)list=list.filter(c=>{const inv=store.investors.get(c.investor_id);return(inv?.full_name||'').toLowerCase().includes(q)||(c.ref||'').toLowerCase().includes(q)});
+    if(mon)list=list.filter(c=>c.month===mon);
+    if(yr)list=list.filter(c=>new Date(c.payment_date).getFullYear().toString()===yr);
+    if(st)list=list.filter(c=>c.status===st);
+    if(pid)list=list.filter(c=>c.product_id===pid);
+    const rows=list.map(c=>{const inv=store.investors.get(c.investor_id);const prod=store.products.get(c.product_id);return{Ref:c.ref||'',Investor:inv?.full_name||'',Product:prod?.name||'Unassigned',Amount:c.amount,Date:c.payment_date,Month:c.month||'',Status:c.status,Note:c.note||''};});
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contributions');XLSX.writeFile(wb,(pid?store.products.get(pid)?.name+'_':'')+'Contributions.xlsx');return;
+  }
   else if(type==='roi'){
-    const rows=get('investors').filter(i=>i.status==='Active').sort((a,b)=>invPaid(b._id)-invPaid(a._id)).map((inv,i)=>{const tot=invPaid(inv._id),share=invShare(inv._id);return{Rank:i+1,Investor:inv.full_name,Contributed:tot,IncomShare:Math.round(share),TotalReturn:Math.round(tot+share),ROI:invROIPct(inv._id).toFixed(1)+'%'};});
-    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ROI');XLSX.writeFile(wb,'ROI_Report.xlsx');return;}
-  const rows=data.map(r=>{const o={};cols.forEach(c=>o[c]=r[c]||'');return o;});
-  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,title);XLSX.writeFile(wb,title.replace(/ /g,'_')+'.xlsx');
+    const pid=document.getElementById('roiProdFilter')?.value||'';
+    let sorted=get('investors').filter(i=>i.status==='Active');
+    if(pid)sorted=sorted.filter(i=>(i.subscribed_products||[]).includes(pid));
+    sorted.sort((a,b)=>invPaid(b._id,pid||undefined)-invPaid(a._id,pid||undefined));
+    const rows=sorted.map((inv,i)=>{const tot=pid?invPaid(inv._id,pid):invPaid(inv._id);const share=pid?invShareForProduct(inv._id,pid):invShare(inv._id);const roi=tot?(share/tot*100):0;return{Rank:i+1,Investor:inv.full_name,Product:pid?store.products.get(pid)?.name:(inv.subscribed_products||[]).map(p=>store.products.get(p)?.name).join(', '),Contributed:tot,IncomeShare:Math.round(share),TotalReturn:Math.round(tot+share),ROI:roi.toFixed(1)+'%'};});
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ROI');XLSX.writeFile(wb,(pid?store.products.get(pid)?.name+'_':'')+'ROI_Report.xlsx');return;
+  }
 };
 
 window.exportProductExcel=function(pid){
@@ -961,13 +1018,54 @@ window.exportProductExcel=function(pid){
 
 // ── EXPORT PDF ────────────────────────────────────────────
 window.exportPDF=function(type){
-  let title='',headers=[],rows=[],filename=type;
-  if(type==='income'){title='Income Records';headers=['Date','Source','Category','Amount','Notes'];rows=get('income').sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>[r.date,r.source,r.category,'₦'+Math.round(r.amount||0).toLocaleString(),r.notes||'']);}
-  else if(type==='expense'){title='Expense Records';headers=['Date','Description','Category','Amount','Notes'];rows=get('expenses').sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>[r.date,r.desc,r.category,'₦'+Math.round(r.amount||0).toLocaleString(),r.notes||'']);}
-  else if(type==='investors'){title='Investor Profiles';headers=['Name','Email','Phone','Products','Contributed','ROI','Status'];rows=get('investors').sort((a,b)=>invPaid(b._id)-invPaid(a._id)).map(i=>[i.full_name,i.email||'',i.phone||'',(i.subscribed_products||[]).map(pid=>store.products.get(pid)?.name).join(', ')||'—','₦'+Math.round(invPaid(i._id)).toLocaleString(),invROIPct(i._id).toFixed(1)+'%',i.status||'Active']);}
-  else if(type==='contributions'){title='Contribution Records';headers=['Ref','Investor','Product','Amount','Date','Month','Status'];rows=get('contributions').sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date)).map(c=>{const inv=store.investors.get(c.investor_id);const prod=store.products.get(c.product_id);return[c.ref||'',inv?.full_name||'',prod?.name||'','₦'+Math.round(c.amount||0).toLocaleString(),c.payment_date,c.month||'',c.status];});}
-  else if(type==='roi'){title='ROI Report';headers=['Rank','Investor','Contributed','Income Share','Total Return','ROI%'];rows=get('investors').filter(i=>i.status==='Active').sort((a,b)=>invPaid(b._id)-invPaid(a._id)).map((inv,i)=>{const tot=invPaid(inv._id),share=invShare(inv._id);return[i+1,inv.full_name,'₦'+Math.round(tot).toLocaleString(),'₦'+Math.round(share).toLocaleString(),'₦'+Math.round(tot+share).toLocaleString(),invROIPct(inv._id).toFixed(1)+'%'];});}
-  openPDFWindow(title,headers,rows,filename);
+  let title='',headers=[],rows=[],pid='';
+  if(type==='income'){
+    pid=document.getElementById('iProdFilter')?.value||'';
+    title=(pid?store.products.get(pid)?.name+' — ':'')+'Income Records';
+    headers=['Date','Product','Source','Category','Amount','Notes'];
+    rows=(pid?get('income').filter(r=>r.product_id===pid):get('income')).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>[r.date,store.products.get(r.product_id)?.name||'Unassigned',r.source,r.category,'₦'+Math.round(r.amount||0).toLocaleString(),r.notes||'']);
+  }
+  else if(type==='expense'){
+    pid=document.getElementById('eProdFilter')?.value||'';
+    title=(pid?store.products.get(pid)?.name+' — ':'')+'Expense Records';
+    headers=['Date','Product','Description','Category','Amount','Notes'];
+    rows=(pid?get('expenses').filter(r=>r.product_id===pid):get('expenses')).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>[r.date,store.products.get(r.product_id)?.name||'Unassigned',r.desc,r.category,'₦'+Math.round(r.amount||0).toLocaleString(),r.notes||'']);
+  }
+  else if(type==='investors'){
+    pid=document.getElementById('invProdFilter')?.value||'';
+    const q=(document.getElementById('invSearch')?.value||'').toLowerCase();
+    title=(pid?store.products.get(pid)?.name+' — ':'')+'Investor Profiles';
+    headers=['Name','Email','Phone','Products','Contributed','ROI','Status'];
+    let list=pid?get('investors').filter(i=>(i.subscribed_products||[]).includes(pid)):get('investors');
+    if(q)list=list.filter(i=>(i.full_name||'').toLowerCase().includes(q)||(i.email||'').toLowerCase().includes(q)||(i.phone||'').toLowerCase().includes(q));
+    rows=list.sort((a,b)=>invPaid(b._id,pid||undefined)-invPaid(a._id,pid||undefined)).map(i=>[i.full_name,i.email||'',i.phone||'',(i.subscribed_products||[]).map(p=>store.products.get(p)?.name).join(', ')||'—','₦'+Math.round(pid?invPaid(i._id,pid):invPaid(i._id)).toLocaleString(),invROIPct(i._id).toFixed(1)+'%',i.status||'Active']);
+  }
+  else if(type==='contributions'){
+    const q=(document.getElementById('cSearch')?.value||'').toLowerCase();
+    const mon=document.getElementById('cMonth')?.value||'';
+    const yr=document.getElementById('cYear')?.value||'';
+    const st=document.getElementById('cStatus')?.value||'';
+    pid=document.getElementById('cProd')?.value||'';
+    title=(pid?store.products.get(pid)?.name+' — ':'')+'Contribution Records';
+    headers=['Ref','Investor','Product','Amount','Date','Month','Status'];
+    let list=[...get('contributions')].sort((a,b)=>new Date(b.payment_date)-new Date(a.payment_date));
+    if(q)list=list.filter(c=>{const inv=store.investors.get(c.investor_id);return(inv?.full_name||'').toLowerCase().includes(q)||(c.ref||'').toLowerCase().includes(q)});
+    if(mon)list=list.filter(c=>c.month===mon);
+    if(yr)list=list.filter(c=>new Date(c.payment_date).getFullYear().toString()===yr);
+    if(st)list=list.filter(c=>c.status===st);
+    if(pid)list=list.filter(c=>c.product_id===pid);
+    rows=list.map(c=>{const inv=store.investors.get(c.investor_id);const prod=store.products.get(c.product_id);return[c.ref||'',inv?.full_name||'',prod?.name||'Unassigned','₦'+Math.round(c.amount||0).toLocaleString(),c.payment_date,c.month||'',c.status];});
+  }
+  else if(type==='roi'){
+    pid=document.getElementById('roiProdFilter')?.value||'';
+    title=(pid?store.products.get(pid)?.name+' — ':'')+'ROI Report';
+    headers=['Rank','Investor','Contributed','Income Share','Total Return','ROI%'];
+    let sorted=get('investors').filter(i=>i.status==='Active');
+    if(pid)sorted=sorted.filter(i=>(i.subscribed_products||[]).includes(pid));
+    sorted.sort((a,b)=>invPaid(b._id,pid||undefined)-invPaid(a._id,pid||undefined));
+    rows=sorted.map((inv,i)=>{const tot=pid?invPaid(inv._id,pid):invPaid(inv._id);const share=pid?invShareForProduct(inv._id,pid):invShare(inv._id);const roi=tot?(share/tot*100):0;return[i+1,inv.full_name,'₦'+Math.round(tot).toLocaleString(),'₦'+Math.round(share).toLocaleString(),'₦'+Math.round(tot+share).toLocaleString(),roi.toFixed(1)+'%'];});
+  }
+  openPDFWindow(title,headers,rows,type);
 };
 
 window.exportProductPDF=function(pid){
