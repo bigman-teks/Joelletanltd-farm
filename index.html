@@ -238,6 +238,7 @@ select.fi option{background:var(--navy2);color:var(--text)}
       <div class="nsec hide-collapsed" id="navFinSec">Finance</div>
       <div class="ni" id="nav-income" onclick="goPage('income',this)"><i class="ti ti-trending-up"></i><span class="hide-collapsed">Income</span></div>
       <div class="ni" id="nav-expenses" onclick="goPage('expenses',this)"><i class="ti ti-trending-down"></i><span class="hide-collapsed">Expenses</span></div>
+      <div class="ni" id="nav-analysis" onclick="goPage('analysis',this)"><i class="ti ti-report-analytics"></i><span class="hide-collapsed">Analysis</span></div>
       <div class="nsec hide-collapsed" id="navInvSec">Investors</div>
       <div class="ni" id="nav-investors" onclick="goPage('investors',this)"><i class="ti ti-users"></i><span class="hide-collapsed">Investors</span></div>
       <div class="ni" id="nav-contributions" onclick="goPage('contributions',this)"><i class="ti ti-cash"></i><span class="hide-collapsed">Contributions</span></div>
@@ -354,6 +355,48 @@ select.fi option{background:var(--navy2);color:var(--text)}
       </div>
 
       <!-- SETTINGS -->
+      <!-- ANALYSIS (admin) -->
+      <div class="page" id="page-analysis">
+        <div class="card">
+          <div class="ch"><span class="ct"><i class="ti ti-filter"></i> Query Products & Expenses</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <button class="btn btn-outline btn-sm" onclick="resetAnalysisFilters()"><i class="ti ti-refresh"></i> Reset</button>
+              <button class="btn btn-excel btn-sm" onclick="exportAnalysisExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+              <button class="btn btn-pdf btn-sm" onclick="exportAnalysisPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+            </div>
+          </div>
+          <div class="sb">
+            <select class="fi" id="anProdFilter" style="width:170px" onchange="window.renderAnalysis()"><option value="">All Products</option></select>
+            <select class="fi" id="anCatFilter" style="width:160px" onchange="window.renderAnalysis()"><option value="">All Categories</option></select>
+            <input class="fi" type="date" id="anFrom" style="width:140px" title="From date" onchange="window.renderAnalysis()">
+            <input class="fi" type="date" id="anTo" style="width:140px" title="To date" onchange="window.renderAnalysis()">
+            <input class="fi" id="anSearch" placeholder="Search expense description / notes..." oninput="window.renderAnalysis()">
+          </div>
+          <div style="font-size:9px;color:var(--text3)">Product and date range apply to contributions, income and expenses. Category and keyword narrow the expense records only.</div>
+        </div>
+
+        <div id="anFormula"></div>
+        <div id="anCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px"></div>
+
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-donut"></i> Expenses by Category</span></div>
+            <div class="cw"><canvas id="anCatChart"></canvas><div class="empty" id="anCatEmpty" style="display:none"><i class="ti ti-chart-donut"></i><p>No expenses match the filters</p></div></div></div>
+          <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-bar"></i> Funds vs Expenses per Product</span></div>
+            <div class="cw"><canvas id="anProdChart"></canvas><div class="empty" id="anProdEmpty" style="display:none"><i class="ti ti-chart-bar"></i><p>No products yet</p></div></div></div>
+        </div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-line"></i> Monthly Funds In vs Expenses Out</span></div>
+          <div class="cw"><canvas id="anMonthChart"></canvas><div class="empty" id="anMonthEmpty" style="display:none"><i class="ti ti-chart-line"></i><p>No dated records in this range</p></div></div></div>
+
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-category"></i> Expense Breakdown by Category</span></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Category</th><th>Records</th><th>Total</th><th>% of Expenses</th><th>% of Funds</th></tr></thead><tbody id="anCatTable"></tbody></table></div></div>
+
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-package"></i> Product Summary</span></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Contributions</th><th>Income</th><th>Total Funds</th><th>Expenses</th><th>Balance</th><th>Expenses / Funds</th></tr></thead><tbody id="anProdTable"></tbody></table></div></div>
+
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-list-search"></i> Expense Records (query result)</span><span id="anQuerySummary" style="font-size:10px;color:var(--text3)"></span></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Product</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead><tbody id="anRecTable"></tbody></table></div></div>
+      </div>
+
       <div class="page" id="page-settings">
         <div class="card">
           <div class="ct" style="margin-bottom:11px"><i class="ti ti-building"></i> App Settings</div>
@@ -462,6 +505,8 @@ function subscribeAll(){
 function renderActivePage(){
   if(!isReady())return;
   const p=activePage;
+  const anNav=document.getElementById('nav-analysis');if(anNav)anNav.style.display=currentUser?.role==='admin'?'':'none';
+  if(p==='analysis'){if(currentUser?.role==='admin'){populateProdFilterSel('anProdFilter');window.renderAnalysis();}return;}
   if(p==='dashboard')renderDashboard();
   else if(p==='products')renderProducts();
   else if(p==='income'){populateProdFilterSel('iProdFilter');window.renderIncome();}
@@ -494,7 +539,7 @@ const fN=n=>'₦'+Math.round(n||0).toLocaleString('en-NG');
 const tInc=(pid)=>get('income').filter(r=>!pid||r.product_id===pid).reduce((s,r)=>s+Number(r.amount||0),0);
 const tExp=(pid)=>get('expenses').filter(r=>!pid||r.product_id===pid).reduce((s,r)=>s+Number(r.amount||0),0);
 const tContrib=(pid)=>get('contributions').filter(c=>c.status==='Paid'&&(!pid||c.product_id===pid)).reduce((s,c)=>s+Number(c.amount||0),0);
-const netFund=(pid)=>tContrib(pid)-tExp(pid);
+const netFund=(pid)=>tContrib(pid)+tInc(pid)-tExp(pid);
 const invPaid=(id,prodId)=>get('contributions').filter(c=>c.investor_id===id&&c.status==='Paid'&&(!prodId||c.product_id===prodId)).reduce((s,c)=>s+Number(c.amount||0),0);
 const tInvAmt=()=>get('investors').reduce((s,i)=>s+invPaid(i._id),0);
 // Investor's income share is computed PER PRODUCT: their share of that product's
@@ -631,7 +676,7 @@ function renderAdminDashboard(){
     {l:'Total Investors',v:get('investors').filter(i=>i.status==='Active').length,i:'ti-users',c:'#c9952a',s:'Active'},
     {l:'Products',v:get('products').filter(p=>p.status!=='Archived').length,i:'ti-package',c:'#9b59b6',s:'Active packages'},
     {l:'Contributions',v:fN(tContrib()),i:'ti-cash',c:'#2ecc71',s:'Total paid'},
-    {l:'Net Fund',v:fN(net),i:'ti-wallet',c:net>=0?'#3a7bd5':'#e74c3c',s:'After expenses'},
+    {l:'Net Fund',v:fN(net),i:'ti-wallet',c:net>=0?'#3a7bd5':'#e74c3c',s:'Contributions + Income − Expenses'},
   ];
   const iM=Array(12).fill(0),eM=Array(12).fill(0);
   get('income').forEach(r=>{iM[new Date(r.date).getMonth()]+=Number(r.amount||0)});
@@ -838,7 +883,7 @@ window.renderExpenses=function(){
   const pid=document.getElementById('eProdFilter')?.value||'';
   const filtered=pid?get('expenses').filter(r=>r.product_id===pid):get('expenses');
   const tot=filtered.reduce((s,r)=>s+Number(r.amount||0),0);
-  document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">${pid?'Product Expenses':'Total Expenses'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-wallet"></i></div><div class="ml">Net Fund</div><div class="mv">${fN(netFund(pid||undefined))}</div><div class="ms">Contributions − Expenses</div></div>`;
+  document.getElementById('expenseMetrics').innerHTML=`<div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-minus"></i></div><div class="ml">${pid?'Product Expenses':'Total Expenses'}</div><div class="mv">${fN(tot)}</div><div class="ms">${filtered.length} records</div></div><div class="mc"><div class="mi" style="background:#c9952a22;color:#c9952a"><i class="ti ti-calculator"></i></div><div class="ml">Avg Transaction</div><div class="mv">${filtered.length?fN(tot/filtered.length):'₦0'}</div></div><div class="mc"><div class="mi" style="background:#e74c3c22;color:#e74c3c"><i class="ti ti-wallet"></i></div><div class="ml">Net Fund</div><div class="mv">${fN(netFund(pid||undefined))}</div><div class="ms">Contributions + Income − Expenses</div></div>`;
   document.getElementById('expenseTable').innerHTML=filtered.length?[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((r,i)=>{const prod=store.products.get(r.product_id);return `<tr><td style="color:var(--text3)">${i+1}</td><td>${r.date}</td><td>${prod?`<span class="tag">${prod.name}</span>`:'<span class="st s-overdue" title="No product assigned - edit to fix">⚠ Unassigned</span>'}</td><td style="font-weight:500;color:var(--text)">${r.desc}</td><td><span class="st s-pending">${r.category}</span></td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td><td style="color:var(--text3)">${r.notes||'—'}</td><td><div class="atd"><button class="btn btn-outline btn-xs" onclick="window.editRec('expense','${r._id}')"><i class="ti ti-edit"></i></button><button class="btn btn-danger btn-xs" onclick="window.delRec('expense','${r._id}')"><i class="ti ti-trash"></i></button></div></td></tr>`}).join(''):`<tr><td colspan="8">${empty('No expenses'+(pid?' for this product':''))}</td></tr>`;
 };;
 
@@ -1168,6 +1213,141 @@ window.saveModal=async function(){
 };
 
 // ── SETTINGS ─────────────────────────────────────────────
+// ── ANALYSIS (admin) ─────────────────────────────────────
+// Total money for a product = paid contributions + income. Expenses are deducted from that total.
+const anCharts={};
+const anSum=a=>a.reduce((s,r)=>s+Number(r.amount||0),0);
+const anAxis=()=>({x:{ticks:{color:'#6a7d95',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6a7d95',font:{size:9},callback:v=>'₦'+Number(v).toLocaleString()},grid:{color:'rgba(255,255,255,.05)'}}});
+const anLegend=()=>({display:true,position:'bottom',labels:{color:'#a8b4c8',font:{size:10},boxWidth:10}});
+
+function populateAnCats(){
+  const sel=document.getElementById('anCatFilter');if(!sel)return;
+  const cur=sel.value;
+  const cats=[...new Set(get('expenses').map(e=>e.category).filter(Boolean))].sort();
+  const hash=cats.join('|');
+  if(sel.getAttribute('data-opts-hash')!==hash){
+    sel.innerHTML='<option value="">All Categories</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    sel.setAttribute('data-opts-hash',hash);
+  }
+  if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+
+function anCompute(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const pid=g('anProdFilter'),cat=g('anCatFilter'),from=g('anFrom'),to=g('anTo'),q=g('anSearch').toLowerCase();
+  const inRange=d=>(!from||(!!d&&d>=from))&&(!to||(!!d&&d<=to));
+  const inProd=r=>!pid||r.product_id===pid;
+  const contribs=get('contributions').filter(c=>c.status==='Paid'&&inProd(c)&&inRange(c.payment_date));
+  const incomes=get('income').filter(r=>inProd(r)&&inRange(r.date));
+  const expScope=get('expenses').filter(r=>inProd(r)&&inRange(r.date));
+  const expAll=q?expScope.filter(r=>(r.desc||'').toLowerCase().includes(q)||(r.category||'').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q)):expScope;
+  const expQ=cat?expAll.filter(r=>r.category===cat):expAll;
+  const totContrib=anSum(contribs),totInc=anSum(incomes),totFunds=totContrib+totInc;
+  const totExp=anSum(expScope),balance=totFunds-totExp;
+  const catMap={};
+  expAll.forEach(e=>{const c=e.category||'Uncategorized';if(!catMap[c])catMap[c]={total:0,count:0};catMap[c].total+=Number(e.amount||0);catMap[c].count++;});
+  const catRows=Object.entries(catMap).map(([name,v])=>({name,total:v.total,count:v.count})).sort((a,b)=>b.total-a.total);
+  const prods=pid?[store.products.get(pid)].filter(Boolean):get('products');
+  const prodRows=prods.map(p=>{
+    const c=anSum(get('contributions').filter(x=>x.status==='Paid'&&x.product_id===p._id&&inRange(x.payment_date)));
+    const i=anSum(get('income').filter(x=>x.product_id===p._id&&inRange(x.date)));
+    const e=anSum(get('expenses').filter(x=>x.product_id===p._id&&inRange(x.date)));
+    return{name:p.name,c,i,funds:c+i,e,bal:c+i-e};
+  });
+  const mm={};
+  const bump=(d,k,v)=>{if(!d)return;const key=String(d).slice(0,7);if(!mm[key])mm[key]={in:0,out:0};mm[key][k]+=Number(v||0)};
+  contribs.forEach(c=>bump(c.payment_date,'in',c.amount));
+  incomes.forEach(r=>bump(r.date,'in',r.amount));
+  expScope.forEach(r=>bump(r.date,'out',r.amount));
+  const months=Object.keys(mm).sort();
+  return{pid,cat,from,to,q,contribs,incomes,expScope,expAll,expQ,totContrib,totInc,totFunds,totExp,balance,catRows,prodRows,mm,months,
+    scopeName:pid?(store.products.get(pid)?.name||'Product'):'All Products'};
+}
+
+function anDraw(key,canvasId,emptyId,has,config){
+  const cv=document.getElementById(canvasId),em=document.getElementById(emptyId);
+  if(!cv)return;
+  if(anCharts[key]){anCharts[key].destroy();anCharts[key]=null;}
+  cv.style.display=has?'block':'none';
+  if(em)em.style.display=has?'none':'block';
+  if(has)anCharts[key]=new Chart(cv,config);
+}
+
+window.renderAnalysis=function(){
+  if(currentUser?.role!=='admin')return;
+  populateAnCats();
+  const A=anCompute();
+  const card=(l,v,i,c,s)=>`<div class="mc"><div class="mi" style="background:${c}22;color:${c}"><i class="ti ${i}"></i></div><div class="ml">${l}</div><div class="mv" style="color:${c}">${v}</div><div class="ms">${s}</div></div>`;
+  document.getElementById('anCards').innerHTML=
+    card('Contributions',fN(A.totContrib),'ti-cash','#c9952a',A.contribs.length+' paid payments')+
+    card('Income',fN(A.totInc),'ti-trending-up','#2ecc71',A.incomes.length+' records')+
+    card('Total Funds',fN(A.totFunds),'ti-coins','#3a7bd5','Contributions + Income')+
+    card('Total Expenses',fN(A.totExp),'ti-trending-down','#e74c3c',A.expScope.length+' records')+
+    card('Balance',fN(A.balance),'ti-wallet',A.balance>=0?'#2ecc71':'#e74c3c','Funds − Expenses');
+  document.getElementById('anFormula').innerHTML=`<div class="al al-i"><i class="ti ti-info-circle"></i><div><strong>${A.scopeName}:</strong> ${fN(A.totContrib)} contributions + ${fN(A.totInc)} income = <strong>${fN(A.totFunds)}</strong> total funds. Less ${fN(A.totExp)} expenses${A.totFunds?` (${(A.totExp/A.totFunds*100).toFixed(1)}% of funds)`:''} = <strong>${fN(A.balance)}</strong> balance.</div></div>`;
+
+  // Charts
+  anDraw('cat','anCatChart','anCatEmpty',A.catRows.length>0,{type:'doughnut',
+    data:{labels:A.catRows.map(r=>r.name),datasets:[{data:A.catRows.map(r=>r.total),backgroundColor:COLORS,borderWidth:2,borderColor:'#112240'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:anLegend(),tooltip:{callbacks:{label:c=>' '+c.label+': '+fN(c.parsed)}}}}});
+  anDraw('prod','anProdChart','anProdEmpty',A.prodRows.length>0,{type:'bar',
+    data:{labels:A.prodRows.map(r=>r.name),datasets:[
+      {label:'Total Funds',data:A.prodRows.map(r=>r.funds),backgroundColor:'rgba(46,204,113,.7)',borderRadius:3},
+      {label:'Expenses',data:A.prodRows.map(r=>r.e),backgroundColor:'rgba(231,76,60,.7)',borderRadius:3},
+      {label:'Balance',data:A.prodRows.map(r=>r.bal),backgroundColor:'rgba(201,149,42,.8)',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:anLegend(),tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fN(c.parsed.y)}}},scales:anAxis()}});
+  anDraw('month','anMonthChart','anMonthEmpty',A.months.length>0,{type:'bar',
+    data:{labels:A.months.map(k=>new Date(k+'-01').toLocaleDateString('en-GB',{month:'short',year:'numeric'})),datasets:[
+      {label:'Funds In (Contributions + Income)',data:A.months.map(k=>A.mm[k].in),backgroundColor:'rgba(46,204,113,.7)',borderRadius:3},
+      {label:'Expenses Out',data:A.months.map(k=>A.mm[k].out),backgroundColor:'rgba(231,76,60,.7)',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:anLegend(),tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fN(c.parsed.y)}}},scales:anAxis()}});
+
+  // Category table
+  const catTotal=anSum(A.expAll);
+  document.getElementById('anCatTable').innerHTML=A.catRows.length?A.catRows.map((r,i)=>{
+    const pe=catTotal?r.total/catTotal*100:0,pf=A.totFunds?r.total/A.totFunds*100:0,col=COLORS[i%COLORS.length];
+    return `<tr style="${A.cat===r.name?'background:rgba(201,149,42,.1)':''}"><td style="color:var(--text);font-weight:500"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};margin-right:6px"></span>${r.name}</td><td>${r.count}</td><td style="color:#e74c3c;font-weight:600">${fN(r.total)}</td><td style="min-width:110px">${pe.toFixed(1)}%<div class="pb"><div class="pf" style="width:${pe}%;background:${col}"></div></div></td><td>${A.totFunds?pf.toFixed(1)+'%':'—'}</td></tr>`;
+  }).join('')+`<tr><td style="font-weight:700;color:var(--text)">Total</td><td>${A.expAll.length}</td><td style="font-weight:700;color:#e74c3c">${fN(catTotal)}</td><td></td><td>${A.totFunds?(catTotal/A.totFunds*100).toFixed(1)+'%':'—'}</td></tr>`
+  :`<tr><td colspan="5">${empty('No expenses match the filters')}</td></tr>`;
+
+  // Product table
+  const pt=A.prodRows.reduce((t,r)=>({c:t.c+r.c,i:t.i+r.i,funds:t.funds+r.funds,e:t.e+r.e,bal:t.bal+r.bal}),{c:0,i:0,funds:0,e:0,bal:0});
+  document.getElementById('anProdTable').innerHTML=A.prodRows.length?A.prodRows.map(r=>`<tr><td style="color:var(--text);font-weight:500">${r.name}</td><td style="color:var(--gold)">${fN(r.c)}</td><td style="color:#2ecc71">${fN(r.i)}</td><td style="color:#3a7bd5;font-weight:600">${fN(r.funds)}</td><td style="color:#e74c3c">${fN(r.e)}</td><td style="color:${r.bal>=0?'#2ecc71':'#e74c3c'};font-weight:700">${fN(r.bal)}</td><td>${r.funds?(r.e/r.funds*100).toFixed(1)+'%':'—'}</td></tr>`).join('')+(A.prodRows.length>1?`<tr><td style="font-weight:700;color:var(--text)">All shown</td><td>${fN(pt.c)}</td><td>${fN(pt.i)}</td><td style="font-weight:700">${fN(pt.funds)}</td><td>${fN(pt.e)}</td><td style="font-weight:700;color:${pt.bal>=0?'#2ecc71':'#e74c3c'}">${fN(pt.bal)}</td><td>${pt.funds?(pt.e/pt.funds*100).toFixed(1)+'%':'—'}</td></tr>`:''):`<tr><td colspan="7">${empty('No products yet')}</td></tr>`;
+
+  // Query result records
+  const recs=[...A.expQ].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const qTotal=anSum(recs);
+  document.getElementById('anQuerySummary').textContent=recs.length+' records · '+fN(qTotal)+(A.totFunds?' · '+(qTotal/A.totFunds*100).toFixed(1)+'% of funds':'');
+  document.getElementById('anRecTable').innerHTML=recs.length?recs.map(r=>`<tr><td>${r.date||'—'}</td><td>${store.products.get(r.product_id)?`<span class="tag">${store.products.get(r.product_id).name}</span>`:'<span class="st s-overdue">⚠ Unassigned</span>'}</td><td><span class="st s-pending">${r.category||'—'}</span></td><td style="color:var(--text)">${r.desc||'—'}</td><td style="color:#e74c3c;font-weight:600">${fN(r.amount)}</td></tr>`).join('')+`<tr><td colspan="4" style="text-align:right;font-weight:700;color:var(--text)">Total</td><td style="font-weight:700;color:#e74c3c">${fN(qTotal)}</td></tr>`
+  :`<tr><td colspan="5">${empty('No expense records match the filters')}</td></tr>`;
+};
+
+window.resetAnalysisFilters=function(){
+  ['anProdFilter','anCatFilter','anFrom','anTo','anSearch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  window.renderAnalysis();
+};
+
+window.exportAnalysisExcel=function(){
+  const XLSX=window.XLSX;if(!XLSX){alert('XLSX library not loaded');return;}
+  const A=anCompute();
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Scope:A.scopeName,Category:A.cat||'All',From:A.from||'—',To:A.to||'—',Contributions:A.totContrib,Income:A.totInc,TotalFunds:A.totFunds,Expenses:A.totExp,Balance:A.balance}]),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(A.catRows.map(r=>({Category:r.name,Records:r.count,Total:r.total}))),'By Category');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(A.prodRows.map(r=>({Product:r.name,Contributions:r.c,Income:r.i,TotalFunds:r.funds,Expenses:r.e,Balance:r.bal}))),'By Product');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([...A.expQ].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>({Date:r.date,Product:store.products.get(r.product_id)?.name||'Unassigned',Category:r.category||'',Description:r.desc||'',Amount:r.amount,Notes:r.notes||''}))),'Expense Records');
+  XLSX.writeFile(wb,(A.pid?A.scopeName+'_':'')+'Expense_Analysis.xlsx');
+};
+
+window.exportAnalysisPDF=function(){
+  const A=anCompute();
+  const recs=[...A.expQ].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const rows=recs.map(r=>[r.date||'',store.products.get(r.product_id)?.name||'Unassigned',r.category||'',r.desc||'','₦'+Math.round(r.amount||0).toLocaleString()]);
+  rows.push(['','','','TOTAL','₦'+Math.round(anSum(recs)).toLocaleString()]);
+  rows.push(['','','','Total Funds (Contributions + Income)','₦'+Math.round(A.totFunds).toLocaleString()]);
+  rows.push(['','','','Balance (Funds − Expenses)','₦'+Math.round(A.balance).toLocaleString()]);
+  openPDFWindow(A.scopeName+(A.cat?' · '+A.cat:'')+' — Expense Analysis',['Date','Product','Category','Description','Amount'],rows,'analysis');
+};
+
 function loadSettingsForm(){document.getElementById('set_name').value=cfg.appName;document.getElementById('set_season').value=cfg.season;renderPendingRegs();}
 window.saveSettings=async function(){cfg.appName=document.getElementById('set_name').value||'Joelle-Tan Ltd';cfg.season=document.getElementById('set_season').value||'Season 2025';await saveCfg();applyBranding();alert('Saved!');};
 window.changePass=async function(){
